@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Entornos virtuales
+venv/
+.env/
+env/
+
+# IDEs
+.vscode/
+.idea/
+
+# Archivo de configuración de la aplicación
+config.json
+
+# MacOS
+.DS_Store
+
+# Imágenes generadas por el sistema o caché
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Archivos sensibles o de configuración personal
+config.json
+
+# Logs
+*.log
+
+# Otros archivos
+*.sqlite3
+*.db
