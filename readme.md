@@ -1,5 +1,7 @@
 # Virtual Pet: Animated Penguin
 
+![Penguin](/images/penguin_idle_01.png)
+
 This project is a **virtual pet** application built with Python and PyQt5. The application displays an animated penguin using a series of sprites and allows simple interaction with it.
 
 ## Features
