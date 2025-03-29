@@ -1,29 +1,43 @@
-# Mascota Virtual: Pingüino Animado
+# Virtual Pet: Animated Penguin
 
-Este proyecto es una aplicación de una **mascota virtual** creada con Python y PyQt5. La aplicación muestra un pingüino animado mediante una serie de sprites, y permite interactuar con él de forma sencilla.
+This project is a **virtual pet** application built with Python and PyQt5. The application displays an animated penguin using a series of sprites and allows simple interaction with it.
 
-## Características
+## Features
 
-- **Animación de sprites:** Se muestran distintos frames para dar la sensación de movimiento.
-- **Interacción con el mouse:** Puedes arrastrar la mascota por la pantalla.
-- **Menú contextual:** Al hacer clic derecho se muestra un menú con opciones, como "Saludar" (imprime un mensaje en la terminal) y "Cerrar" (cierra la aplicación).
-- **Escalado de imágenes:** Las imágenes se escalan para obtener un tamaño adecuado.
+- **Sprite Animation:** Multiple frames are shown to create a smooth animation effect.
+- **Mouse Interaction:** You can drag the pet around the screen.
+- **Context Menu:** Right-clicking opens a menu with options, such as "Greet" (prints a message to the terminal) and "Close" (exits the application).
+- **Image Scaling:** Images are scaled to an appropriate size.
 
-## Requisitos
+## Requirements
 
-- **Python 3.x** (se recomienda Python 3.6 o superior)
+- **Python 3.x** (Python 3.6 or later is recommended)
 - **PyQt5** (>= 5.15.0)
 
-## Instalación
+## Installation
 
-1. **Clona o descarga el repositorio.**
+1. **Clone or download the repository.**
 
-2. **Crea y activa un entorno virtual (opcional, pero recomendado):**
+2. **Create and activate a virtual environment (optional but recommended):**
 
    ```bash
    python3 -m venv venv
-   source venv/bin/activate  # En Linux/macOS
-   # venv\Scripts\activate   # En Windows
+   source venv/bin/activate  # On Linux/macOS
+   # For Windows: venv\Scripts\activate
+   ```
 
-## 📜 Licencia  
-Este proyecto está bajo la licencia [GPL-3.0](LICENSE).  
+3. **Install the required dependencies:**
+
+   ```bash
+   pip install PyQt5
+   ```
+
+4. **Run the application:**
+
+   ```bash
+   python main.py
+   ```
+
+## License
+
+This project is licensed under the [GPL-3.0](LICENSE) license.
