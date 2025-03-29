@@ -8,7 +8,6 @@ Este proyecto es una aplicación de una **mascota virtual** creada con Python y 
 - **Interacción con el mouse:** Puedes arrastrar la mascota por la pantalla.
 - **Menú contextual:** Al hacer clic derecho se muestra un menú con opciones, como "Saludar" (imprime un mensaje en la terminal) y "Cerrar" (cierra la aplicación).
 - **Escalado de imágenes:** Las imágenes se escalan para obtener un tamaño adecuado.
-- **Ventana con bordes visibles:** La ventana no es completamente transparente, lo que permite ver sus límites.
 
 ## Requisitos
 
@@ -25,3 +24,6 @@ Este proyecto es una aplicación de una **mascota virtual** creada con Python y 
    python3 -m venv venv
    source venv/bin/activate  # En Linux/macOS
    # venv\Scripts\activate   # En Windows
+
+## 📜 Licencia  
+Este proyecto está bajo la licencia [GPL-3.0](LICENSE).  
