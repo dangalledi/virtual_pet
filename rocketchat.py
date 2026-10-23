@@ -107,6 +107,7 @@ class RocketChatWorker(QThread):
         self.client   = client
         self.activo   = True      # lo cambia el pingüino desde el menú
         self._running = True
+        self._despertar = threading.Event()   # espera entre vueltas, interrumpible
         self._seen    = []        # ids ya avisados (orden de llegada)
         self._seen_set = set()
         self._first   = True
@@ -114,6 +115,7 @@ class RocketChatWorker(QThread):
 
     def stop(self):
         self._running = False
+        self._despertar.set()   # sale de la espera al momento
         self.quit()
 
     def _remember(self, msg_id: str):
@@ -198,7 +200,4 @@ class RocketChatWorker(QThread):
                     log(f"[RC] Error consultando Rocket.Chat: {e}")
                     self._error = str(e)
 
-            for _ in range(self.POLL_SECONDS):
-                if not self._running:
-                    return
-                self.sleep(1)
+            self._despertar.wait(self.POLL_SECONDS)

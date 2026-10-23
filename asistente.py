@@ -25,6 +25,7 @@ class AsistenteWorker(QThread):
         self.woffu = WoffuClient()
         self.vpn   = VpnState()
         self._running = True
+        self._despertar = threading.Event()   # espera entre vueltas, interrumpible
         self._day     = None
 
         # Interruptores (los cambia el pingüino desde el menú)
@@ -69,6 +70,7 @@ class AsistenteWorker(QThread):
 
     def stop(self):
         self._running = False
+        self._despertar.set()   # sale de la espera al momento
         self.quit()
 
     # ------------------------------------------------------------------
@@ -100,11 +102,9 @@ class AsistenteWorker(QThread):
                 except Exception as e:
                     log(f"Woffu: error revisando fichajes: {e}")
 
-            # Una vuelta por minuto (suficiente para todos los avisos)
-            for _ in range(60):
-                if not self._running:
-                    return
-                self.sleep(1)
+            # Una vuelta por minuto (suficiente para todos los avisos); sin
+            # despertar cada segundo para ahorrar batería
+            self._despertar.wait(60)
 
     def _nuevo_dia(self, day):
         self._day = day

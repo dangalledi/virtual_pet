@@ -42,6 +42,10 @@ AVISOS = {
     "bano":    ("atack", None,                    8000),
 }
 
+# Velocidad de la animación (ms entre imágenes): quieto va más lento para gastar menos
+FRAME_MS_QUIETO = 250
+FRAME_MS_MOVIMIENTO = 120
+
 # Valor de cada opción del menú mientras no la cambies (se guarda en settings.json)
 OPCIONES_POR_DEFECTO = {
     "avisos_reuniones": True,
@@ -142,7 +146,7 @@ class PenguinCharacter(QWidget):
     def setupTimer(self):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.updateAnimation)
-        self.timer.start(120)  # Actualiza cada 120 ms
+        self.timer.start(FRAME_MS_QUIETO)
 
     def updateAnimation(self):
         if not self.bubble_active:
@@ -206,6 +210,7 @@ class PenguinCharacter(QWidget):
 
     def setState(self, state):
         self.current_state = state
+        self.timer.setInterval(FRAME_MS_QUIETO if state == "idle" else FRAME_MS_MOVIMIENTO)
 
         if state == "slide":
             # Uno de los 4 ángulos diagonales
@@ -558,6 +563,8 @@ class PenguinCharacter(QWidget):
             self._avisos_pendientes.appendleft(self._bubble_args)
         self.hide()             # primero esconder: así la cola no lo hace volver
         self._hide_bubble()
+        self.timer.stop()       # sin animar mientras no se ve (ahorra batería)
+        self.setState("idle")
         self._hide_timer.start(HIDE_MINUTES * 60 * 1000)
         vuelta = (datetime.datetime.now() + datetime.timedelta(minutes=HIDE_MINUTES)).strftime("%H:%M")
         if self.tray:
@@ -572,6 +579,7 @@ class PenguinCharacter(QWidget):
         if self.tray:
             self.tray.hide()
         if not self.isVisible():
+            self.timer.start()
             self.show()
             self.raise_()
             self.setFocus()
@@ -775,7 +783,7 @@ class PenguinCharacter(QWidget):
         self.auto_move_timer.start(60 * 1000)  # cada minuto
 
     def triggerAutoMove(self):
-        if self.bubble_active:
+        if self.bubble_active or not self.isVisible():
             return   # quieto mientras enseña un globo, para que no se separe de él
         action = random.choice(["walk", "jump", "slide"])
         if action == "walk":
