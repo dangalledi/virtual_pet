@@ -17,7 +17,7 @@ from utils import log
 class EstadoAuto:
     def __init__(self, client):
         self.client     = client
-        self.activo     = True     # lo cambia el pingüino desde el menú
+        self.activo     = False    # desactivado por defecto; se activa desde el menú
         self.en_reunion = False
         self.escondido  = False
         self.fuera      = False    # fichada la salida

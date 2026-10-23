@@ -42,6 +42,14 @@ AVISOS = {
     "bano":    ("atack", None,                    8000),
 }
 
+# Valor de cada opción del menú mientras no la cambies (se guarda en settings.json)
+OPCIONES_POR_DEFECTO = {
+    "avisos_reuniones": True,
+    "avisos_dm":        True,
+    "pausas":           True,
+    "estado_auto":      False,   # cambiar tu estado de Rocket.Chat solo es opcional
+}
+
 # Si al código 2FA le quedan menos de estos segundos, se espera al siguiente
 DOSFA_MARGEN = 5
 
@@ -366,7 +374,7 @@ class PenguinCharacter(QWidget):
 
     def _toggle(self, clave: str):
         """Activa/desactiva una opción del menú y la guarda en settings.json."""
-        activo = not self.settings.get(clave, True)
+        activo = not self.opcion(clave)
         self.settings[clave] = activo
         save_settings(self.settings)
         self._aplicar_settings()
@@ -385,13 +393,15 @@ class PenguinCharacter(QWidget):
         if clave == "estado_auto" and activo:
             self.estado_rc.actualizar()
 
+    def opcion(self, clave: str) -> bool:
+        return self.settings.get(clave, OPCIONES_POR_DEFECTO[clave])
+
     def _aplicar_settings(self):
-        s = self.settings
-        self.asistente.avisos_reuniones = s.get("avisos_reuniones", True)
-        self.asistente.pausas_activas   = s.get("pausas", True)
+        self.asistente.avisos_reuniones = self.opcion("avisos_reuniones")
+        self.asistente.pausas_activas   = self.opcion("pausas")
         if self.rc_client:
-            self.rc_worker.activo = s.get("avisos_dm", True)
-            self.estado_rc.activo = s.get("estado_auto", True)
+            self.rc_worker.activo = self.opcion("avisos_dm")
+            self.estado_rc.activo = self.opcion("estado_auto")
 
     def _toggle_intensiva(self):
         w = self.asistente.woffu

@@ -30,8 +30,8 @@ info "Comprobando dependencias del sistema..."
 command -v python3 &>/dev/null || error "Python 3 no encontrado. Instálalo con: sudo apt install python3"
 
 PY_VERSION=$(python3 -c 'import sys; print(sys.version_info[:2])' 2>/dev/null)
-python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,6) else 1)' \
-    || error "Se requiere Python 3.6 o superior (encontrado: $PY_VERSION)"
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,8) else 1)' \
+    || error "Se requiere Python 3.8 o superior (encontrado: $PY_VERSION)"
 
 command -v pip3 &>/dev/null || command -v pip &>/dev/null \
     || error "pip no encontrado. Instálalo con: sudo apt install python3-pip"
@@ -126,16 +126,9 @@ fi
 # =============================================================================
 # 5. Crear script de arranque
 # =============================================================================
-info "Creando script de arranque (run.sh)..."
-
-cat > "$INSTALL_DIR/run.sh" <<EOF
-#!/usr/bin/env bash
-cd "\$(dirname "\$0")"
-source .venv/bin/activate
-python3 main.py "\$@"
-EOF
+# run.sh viene en el repositorio (usa .venv/bin/python directamente)
 chmod +x "$INSTALL_DIR/run.sh"
-success "run.sh creado"
+success "run.sh listo"
 
 # =============================================================================
 # 6. (Opcional) Crear entrada de autoarranque al iniciar sesión
@@ -152,11 +145,13 @@ if [[ "$AUTOSTART" =~ ^[sS]$ ]]; then
     cat > "$AUTOSTART_DIR/virtual-pet.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Virtual Pet
-Comment=Animated desktop penguin
-Exec=bash ${INSTALL_DIR}/run.sh
+Name=Pingüino (virtual pet)
+Comment=Asistente de escritorio: Woffu, reuniones, Rocket.Chat y VPN
+Exec=${INSTALL_DIR}/run.sh --autostart
 Icon=${INSTALL_DIR}/images/penguin_idle_01.png
+Terminal=false
 X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=10
 Hidden=false
 NoDisplay=false
 EOF
@@ -199,7 +194,7 @@ echo "────────────────────────�
 echo -e "${GREEN}${BOLD}🐧  ¡Instalación completada!${NC}"
 echo ""
 echo -e "  Iniciar:      ${BOLD}./run.sh${NC}"
-echo -e "  Controles:    ← → saltar, ↑ saltar, ↓ slide, A atacar"
-echo -e "  Doble click:  chiste aleatorio"
-echo -e "  Click derecho: menú (horas Woffu, VPN, cerrar)"
+echo -e "  Click derecho: menú con todo (Woffu, reuniones, Rocket.Chat, VPN, 2FA…)"
+echo -e "  Doble click:   esconderse junto al reloj · Triple click: chiste"
+echo -e "  Más opciones:  edita .env (mira .env.example y el readme)"
 echo ""
