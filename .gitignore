@@ -6,8 +6,16 @@ __pycache__/
 
 # Entornos virtuales
 venv/
-.env/
+.venv/
 env/
+
+# Variables de entorno (credenciales)
+.env
+.env.local
+
+# Datos sensibles de sesión
+error_state.json
+state.json
 
 # IDEs
 .vscode/
@@ -33,3 +41,7 @@ config.json
 # Otros archivos
 *.sqlite3
 *.db
+
+# Preferencias del menú
+settings.json
+.pingu.lock

@@ -1,0 +1,70 @@
+"""Utilidades comunes: .env, log, preferencias guardadas e inactividad del usuario."""
+import os
+import json
+import datetime
+import subprocess
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
+SETTINGS_FILE = BASE_DIR / "settings.json"
+
+
+def log(message: str):
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] [DEBUG] {message}", flush=True)
+
+
+def env(name: str, default: str = "") -> str:
+    """Lee una variable del .env quitando comentarios al final de la línea."""
+    return os.getenv(name, default).split("#")[0].strip()
+
+
+def env_int(name: str, default: int) -> int:
+    try:
+        return int(env(name, str(default)))
+    except ValueError:
+        log(f"{name} no es un número; uso {default}")
+        return default
+
+
+def load_settings() -> dict:
+    """Preferencias que se cambian desde el menú y se recuerdan entre reinicios."""
+    try:
+        return json.loads(SETTINGS_FILE.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def save_settings(settings: dict):
+    try:
+        SETTINGS_FILE.write_text(json.dumps(settings, indent=2))
+    except OSError as e:
+        log(f"No se pudo guardar {SETTINGS_FILE.name}: {e}")
+
+
+def idle_seconds():
+    """Segundos sin tocar teclado ni ratón, según GNOME (Mutter). None si no se puede saber."""
+    try:
+        out = subprocess.run(
+            ["gdbus", "call", "--session",
+             "--dest", "org.gnome.Mutter.IdleMonitor",
+             "--object-path", "/org/gnome/Mutter/IdleMonitor/Core",
+             "--method", "org.gnome.Mutter.IdleMonitor.GetIdletime"],
+            capture_output=True, text=True, timeout=3)
+        if out.returncode != 0:
+            return None
+        # Respuesta: "(uint64 12345,)" en milisegundos
+        ms = int(out.stdout.strip().strip("(),").split()[-1])
+        return ms / 1000
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+def hm(secs: float) -> str:
+    """Segundos → '6h 31min'."""
+    secs = abs(int(secs))
+    return f"{secs // 3600}h {(secs % 3600) // 60}min"
