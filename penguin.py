@@ -340,7 +340,12 @@ class PenguinCharacter(QWidget):
         item("☀️ Jornada intensiva hoy", self._toggle_intensiva,
              checked=w.es_intensiva(), enabled=not w.es_verano())   # en verano va sola
         if calendario.ausencias_configurado():
-            item("🏖️ Quién falta hoy", lambda: self._run_and_show(a.ausentes_texto))
+            sub = menu.addMenu("🏖️ Ausencias del equipo")
+            item("Hoy", lambda: self._run_and_show(a.ausentes_texto), parent=sub)
+            item("Esta semana", lambda: self._run_and_show(lambda: a.ausencias_semana_texto(0)),
+                 parent=sub)
+            item("Próxima semana", lambda: self._run_and_show(lambda: a.ausencias_semana_texto(1)),
+                 parent=sub)
 
         # --- Reuniones ---
         if calendario.sogo_configurado():

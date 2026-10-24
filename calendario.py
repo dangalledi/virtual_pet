@@ -144,35 +144,63 @@ def hora_copia_reuniones():
 # ---------------------------------------------------------------------------
 _ical_cache = None   # (timestamp, eventos)
 
+# Tipos de evento del iCal de Woffu que cuentan como ausencia
+AUSENCIA            = "Ausencia"
+AUSENCIA_PENDIENTE  = "Procesando Ausencia"   # pedida, aún sin aprobar
+
 
 def ausencias_configurado() -> bool:
     return bool(_env("WOFFU_ICAL_URL"))
 
 
-def ausentes_hoy():
-    """Nombres (solo el primero) de quien falta hoy. None si falla la consulta."""
+def _eventos_ausencia() -> list:
+    """[{nombre, dia, pendiente}] del iCal de Woffu (un evento por persona y día).
+    Cacheado ICAL_CACHE_TTL segundos. Lanza excepción si falla la descarga."""
     global _ical_cache
-    url = _env("WOFFU_ICAL_URL")
-    if not url:
-        return None
-    if not _ical_cache or time.time() - _ical_cache[0] >= ICAL_CACHE_TTL:
-        resp = requests.get(url, timeout=30)
-        resp.raise_for_status()
-        events = []
-        for comp in Calendar.from_ical(resp.content).walk("VEVENT"):
-            dtstart = comp.get("DTSTART")
-            if not dtstart:
-                continue
-            s = dtstart.dt
-            start = s.date() if isinstance(s, datetime.datetime) else s
-            desc  = str(comp.get("DESCRIPTION", "")).strip()
-            tipo  = desc.splitlines()[-1].strip() if desc else ""
-            summary = str(comp.get("SUMMARY", "")).strip()
-            if summary:
-                events.append({"summary": summary, "start": start, "tipo": tipo})
-        _ical_cache = (time.time(), events)
+    if _ical_cache and time.time() - _ical_cache[0] < ICAL_CACHE_TTL:
+        return _ical_cache[1]
+    resp = requests.get(_env("WOFFU_ICAL_URL"), timeout=30)
+    resp.raise_for_status()
+    events = []
+    for comp in Calendar.from_ical(resp.content).walk("VEVENT"):
+        dtstart = comp.get("DTSTART")
+        nombre  = str(comp.get("SUMMARY", "")).strip()
+        if not dtstart or not nombre:
+            continue
+        desc = str(comp.get("DESCRIPTION", "")).strip()
+        tipo = desc.splitlines()[-1].strip() if desc else ""
+        if tipo not in (AUSENCIA, AUSENCIA_PENDIENTE):
+            continue
+        dia = dtstart.dt.date() if isinstance(dtstart.dt, datetime.datetime) else dtstart.dt
+        events.append({"nombre": nombre.split()[0], "dia": dia,
+                       "pendiente": tipo == AUSENCIA_PENDIENTE})
+    _ical_cache = (time.time(), events)
+    return events
 
+
+def ausentes_hoy():
+    """Nombres (solo el primero) de quien falta hoy. None si no está configurado."""
+    if not ausencias_configurado():
+        return None
     today = datetime.date.today()
-    nombres = {e["summary"] for e in _ical_cache[1]
-               if e["start"] == today and e["tipo"] == "Ausencia"}
-    return sorted(n.split()[0] for n in nombres)
+    return sorted({e["nombre"] for e in _eventos_ausencia() if e["dia"] == today})
+
+
+def lunes_de(semana: int = 0) -> datetime.date:
+    """Lunes de esta semana (0) o de la siguiente (1). En fin de semana,
+    "esta semana" es la que empieza el lunes (la que acaba ya no interesa)."""
+    today = datetime.date.today()
+    if today.weekday() >= 5:
+        semana += 1
+    return today - datetime.timedelta(days=today.weekday()) + datetime.timedelta(weeks=semana)
+
+
+def ausencias_semana(semana: int = 0) -> dict:
+    """{nombre: [(día, pendiente), ...]} de lunes a viernes de esa semana."""
+    lunes   = lunes_de(semana)
+    viernes = lunes + datetime.timedelta(days=4)
+    result = {}
+    for e in _eventos_ausencia():
+        if lunes <= e["dia"] <= viernes:
+            result.setdefault(e["nombre"], set()).add((e["dia"], e["pendiente"]))
+    return {n: sorted(d) for n, d in sorted(result.items())}

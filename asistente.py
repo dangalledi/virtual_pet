@@ -218,6 +218,37 @@ class AsistenteWorker(QThread):
             return "✅ Hoy no falta nadie del equipo."
         return f"🏖️ Faltan hoy ({len(nombres)}):\n" + "\n".join(f"• {n}" for n in nombres)
 
+    @staticmethod
+    def ausencias_semana_texto(semana: int = 0) -> str:
+        """Quién falta y qué días, esta semana (0) o la próxima (1)."""
+        if not calendario.ausencias_configurado():
+            return "❌ Falta WOFFU_ICAL_URL en el .env"
+        try:
+            ausencias = calendario.ausencias_semana(semana)
+        except Exception as e:
+            log(f"Ausencias error: {e}")
+            return "❌ No pude consultar las ausencias."
+        lunes   = calendario.lunes_de(semana)
+        viernes = lunes + datetime.timedelta(days=4)
+        titulo  = "esta semana" if semana == 0 else "la próxima semana"
+        cabecera = f"🏖️ Ausencias {titulo} ({lunes.strftime('%d/%m')}–{viernes.strftime('%d/%m')})"
+        if not ausencias:
+            return f"{cabecera}\n✅ No falta nadie."
+        lineas = [cabecera]
+        pendientes = False
+        for nombre, dias in ausencias.items():
+            if len(dias) == 5:
+                texto = "toda la semana"
+            else:
+                texto = ", ".join(DIAS_CORTOS[d.weekday()] for d, _ in dias)
+            if any(p for _, p in dias):
+                texto += " *"
+                pendientes = True
+            lineas.append(f"• {nombre}: {texto}")
+        if pendientes:
+            lineas.append("* pendiente de aprobar")
+        return "\n".join(lineas)
+
     # ------------------------------------------------------------------
     # Woffu: jornada y recordatorios de fichaje
     # ------------------------------------------------------------------
@@ -375,16 +406,23 @@ class AsistenteWorker(QThread):
             else:
                 lineas.append("📅 Sin reuniones hoy")
 
-        # Ausencias
+        # Ausencias: hoy; los lunes, la semana; los viernes, la que viene
         if calendario.ausencias_configurado():
             try:
                 nombres = calendario.ausentes_hoy()
-                lineas.append(f"🏖️ Faltan: {', '.join(nombres)}" if nombres
+                lineas.append(f"🏖️ Hoy faltan: {', '.join(nombres)}" if nombres
                               else "🏖️ Hoy no falta nadie")
             except Exception as e:
                 log(f"Resumen: ausencias error: {e}")
+            if today.weekday() == 0:
+                lineas += ["", self.ausencias_semana_texto(0)]
+            elif today.weekday() == 4:
+                lineas += ["", self.ausencias_semana_texto(1)]
 
         return "\n".join(lineas)
+
+
+DIAS_CORTOS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
 
 
 class VpnState:

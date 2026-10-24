@@ -9,11 +9,11 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 
 **What Pingu does**
 
-- ⏱ **Woffu** — worked hours and estimated leave time, clock in/out from the menu, reminders if you forgot to clock in or out, 🎉 when you complete your hours, summer intensive schedule, who's absent today
+- ⏱ **Woffu** — worked hours and estimated leave time, clock in/out from the menu, reminders if you forgot to clock in or out, 🎉 when you complete your hours, summer intensive schedule, who's absent today / this week / next week
 - 📅 **Meetings** — bubble 10 min before each meeting in your SOGo calendar, and today's list in the menu
 - 💬 **Rocket.Chat** — bubble with direct messages and mentions (click it to open the chat); optional automatic status (meeting → *No molestar*, away → *Ausente*)
 - 🔌 **VPN** — warns you when the VPN drops and opens a terminal to reconnect it with one click
-- ☀️ **Daily summary** — each workday morning: clock-in, leave time, meetings and absences
+- ☀️ **Daily summary** — each workday morning: clock-in, leave time, meetings and absences (the whole week on Mondays, next week on Fridays)
 - 🧘 **Breaks** — reminds you to stand up after 90 min of continuous use
 - 🔐 **2FA** — copies your TOTP code to the clipboard (like the `my2fa` alias)
 - 🙈 **Hide** — double-click and it hides next to the clock for 30 min
@@ -26,7 +26,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
    | To get… | Fill in |
    |---|---|
    | Woffu hours, clock in/out, reminders | `WOFFU_EMAIL`, `WOFFU_PASSWORD` |
-   | Who's absent today | `WOFFU_ICAL_URL` |
+   | Team absences (today, this week, next week) | `WOFFU_ICAL_URL` |
    | Meeting reminders | `SOGO_USER`, `SOGO_PASSWORD`, `SOGO_CALENDAR_URL` |
    | Rocket.Chat messages and status | `ROCKET_CHAT_URL`, `ROCKET_CHAT_APP_ID`, `ROCKET_CHAT_APP_SECRET` |
    | "Connect VPN" button | `VPN_CONNECT_CMD` |
@@ -47,7 +47,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 
 **Right-click menu**
 
-- Woffu status line · 📋 Daily summary · ⏱ Hours today · 🕒 Clock in/out · ☀️ Intensive schedule today · 🏖️ Who's absent today
+- Woffu status line · 📋 Daily summary · ⏱ Hours today · 🕒 Clock in/out · ☀️ Intensive schedule today · 🏖️ Team absences ▸ today / this week / next week
 - 📅 Today's meetings · 🔔 Meeting reminders *(on/off)*
 - 💬 Message and mention alerts *(on/off)* · 🤖 Automatic Rocket.Chat status *(on/off, off by default)* · 🟢 Change Rocket.Chat status
 - 🔐 Copy 2FA code · 🧘 Break reminders *(on/off)* · 🔌 Connect VPN · 📶 Check VPN · 😂 Joke · 🙈 Hide · Close
@@ -62,6 +62,7 @@ The top-bar icon (when hidden) has *Come back now*, *Copy 2FA code* and *Close*.
 - ⏰ Reminders on weekdays if you haven't clocked in by 10:00, or you're still clocked in at 18:30
 - 🚽 Warns you 10 min before lunch; after clocking out it offers a 30-min "you can come back" reminder
 - Clocking in/out from the menu always asks for confirmation
+- 🏖️ Team absences for today, this week or next week, with the days each person is off (requests not yet approved are marked with `*`). On weekends, "this week" means the one starting on Monday
 
 ### Meetings (SOGo calendar)
 - Bubble 10 min before each meeting with the title, time and room (recurring meetings included)
@@ -76,7 +77,7 @@ The top-bar icon (when hidden) has *Come back now*, *Copy 2FA code* and *Close*.
 - When it drops, the red bubble says *click here to connect it*: it opens a terminal running `VPN_CONNECT_CMD`, where you type your passwords as usual. **Closing that terminal disconnects the VPN**
 
 ### Daily summary, breaks and alerts
-- **Daily summary**: weekdays, the first time you're at the computer between 07:00 and 15:00 (once a day)
+- **Daily summary**: weekdays, the first time you're at the computer between 07:00 and 15:00 (once a day). On Mondays it adds the week's absences, on Fridays next week's
 - **Breaks**: after 90 min using keyboard/mouse without a 5-min pause (uses GNOME's idle monitor). Not during meetings or after clocking out
 - **Alert queue**: important alerts stay until you click them; if several arrive at once they wait in line
 - **2FA**: if the code expires in less than 5 s it waits for the next one, and clears it from the clipboard when it expires
