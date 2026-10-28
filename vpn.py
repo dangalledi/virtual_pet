@@ -1,6 +1,7 @@
-"""Detección de VPN en dos pasos:
-1) la interfaz del túnel (ppp0) está UP y con IP;
-2) alguna máquina interna responde por SSH (sin login).
+"""Detección de VPN / red interna:
+- Lo que manda es si alguna máquina interna responde por SSH (sin login).
+- La interfaz del túnel (ppp0) solo dice *cómo* llegamos: con ella es la VPN;
+  sin ella, estamos en la red de la oficina y la VPN no hace falta.
 Así se detecta también el caso "túnel levantado pero sin tráfico".
 """
 import re
@@ -56,19 +57,32 @@ def ssh_responde(host: str, port: int, timeout: float = 5) -> bool:
         return False
 
 
+# Detalle de "conectada" cuando llegamos a la red interna sin túnel (estamos en la oficina)
+OFICINA = "oficina"
+
+
+def _detalle_ok(iface_activa: bool) -> str:
+    return "" if iface_activa else OFICINA
+
+
+def _detalle_caida(iface: str, iface_activa: bool, failed: list) -> str:
+    if iface and not iface_activa:
+        return f"La interfaz {iface} no está activa."
+    return "No responde: " + ", ".join(failed)
+
+
 def estado_ahora() -> tuple:
     """Comprobación completa e inmediata (prueba todos los hosts).
-    Devuelve (conectada, detalle)."""
+    Devuelve (conectada, detalle); detalle == OFICINA si es por la red de la oficina."""
     iface = interfaz()
-    if iface and not interfaz_activa(iface):
-        return False, f"La interfaz {iface} no está activa."
+    activa = interfaz_activa(iface) if iface else True
     hs = hosts()
     if not hs:
-        return True, ""
+        return activa, "" if activa else f"La interfaz {iface} no está activa."
     failed = [h for h, p in hs if not ssh_responde(h, p)]
     if len(failed) < len(hs):
-        return True, ""
-    return False, "No responde: " + ", ".join(failed)
+        return True, _detalle_ok(activa)
+    return False, _detalle_caida(iface, activa, failed)
 
 
 def comando_conexion() -> str:
@@ -107,40 +121,56 @@ def conectar_en_terminal() -> str:
 
 class VpnMonitor:
     """Chequeo periódico barato: un host por vuelta, rotando.
-    Caída = interfaz abajo, o todos los hosts han fallado en su última prueba."""
+    Caída = todos los hosts han fallado en su última prueba.
+    Si el túnel se cae estando conectados, se prueban todos a la vez para avisar
+    rápido (o darse cuenta enseguida de que estamos en la red de la oficina)."""
 
     def __init__(self):
         self.conectada = None      # None = desconocido (primer arranque)
+        self.en_oficina = False    # conectada sin túnel: red interna de la oficina
         self._results  = {}        # host -> último resultado
         self._index    = 0
+        self._iface_activa = None
 
     def comprobar(self):
         """Devuelve (conectada, detalle) si el estado ha cambiado; None si sigue igual."""
         iface = interfaz()
-        if iface and not interfaz_activa(iface):
-            self._results.clear()
-            return self._cambiar(False, f"La interfaz {iface} no está activa.")
+        activa = interfaz_activa(iface) if iface else True
+        iface_cambio = activa != self._iface_activa
+        self._iface_activa = activa
 
         hs = hosts()
         if not hs:
-            return self._cambiar(True, "") if iface else None
+            if not iface:
+                return None
+            return self._cambiar(activa, "" if activa else f"La interfaz {iface} no está activa.")
 
-        host, port = hs[self._index % len(hs)]
-        self._index += 1
-        ok = ssh_responde(host, port)
-        if self._results.get(host) != ok:
-            log(f"VPN check {host}:{port} -> {'OK' if ok else 'FALLO'}")
-        self._results[host] = ok
+        # El túnel acaba de cambiar: lo de antes ya no vale, probar todos ahora
+        a_probar = hs if iface_cambio else [hs[self._index % len(hs)]]
+        if iface_cambio:
+            self._results.clear()
+        else:
+            self._index += 1
+        for host, port in a_probar:
+            ok = ssh_responde(host, port)
+            if self._results.get(host) != ok:
+                log(f"VPN check {host}:{port} -> {'OK' if ok else 'FALLO'}")
+            self._results[host] = ok
+            if ok:
+                return self._cambiar(True, _detalle_ok(activa))
 
-        if ok:
-            return self._cambiar(True, "")
         if all(h in self._results for h, _ in hs) and not any(self._results[h] for h, _ in hs):
-            return self._cambiar(False, "No responde: " + ", ".join(h for h, _ in hs))
+            return self._cambiar(False, _detalle_caida(iface, activa, [h for h, _ in hs]))
         return None
 
     def _cambiar(self, conectada: bool, detalle: str):
+        oficina = conectada and detalle == OFICINA
         if conectada == self.conectada:
+            if conectada and oficina != self.en_oficina:   # VPN <-> oficina: sin aviso
+                self.en_oficina = oficina
+                log(f"VPN: ahora por {'la red de la oficina' if oficina else 'el túnel'}")
             return None
         self.conectada = conectada
+        self.en_oficina = oficina
         log(f"VPN: {'conectada' if conectada else 'desconectada'} {detalle}".strip())
         return conectada, detalle

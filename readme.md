@@ -11,7 +11,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 
 - ⏱ **Woffu** — worked hours and estimated leave time, clock in/out from the menu, reminders if you forgot to clock in or out, 🎉 when you complete your hours, summer intensive schedule, who's absent today / this week / next week
 - 📅 **Meetings** — bubble 10 min before each meeting in your SOGo calendar, and today's list in the menu
-- 💬 **Rocket.Chat** — bubble with direct messages and mentions (click it to open the chat); optional automatic status (meeting → *No molestar*, away → *Ausente*)
+- 💬 **Rocket.Chat** — bubble with direct messages and mentions (click it to bring your browser to the front — no new tabs); optional automatic status (meeting → *No molestar*, away → *Ausente*)
 - 🔌 **VPN** — warns you when the VPN drops and opens a terminal to reconnect it with one click
 - ☀️ **Daily summary** — each workday morning: clock-in, leave time, meetings and absences (the whole week on Mondays, next week on Fridays)
 - 🧘 **Breaks** — reminds you to stand up after 90 min of continuous use
@@ -42,7 +42,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 | Double-click | Hide it in the top bar for 30 min (click the bar icon to bring it back) |
 | Triple-click | Tells a joke |
 | Right-click | Menu with everything below |
-| Click a bubble | Closes it (and opens the chat / connects the VPN / copies the code, if the bubble says so) |
+| Click a bubble | Closes it (and brings the browser to the front / connects the VPN / copies the code, if the bubble says so) |
 | `←` `→` `↑` `↓` `A` | Walk, jump, slide, attack |
 
 **Right-click menu**
@@ -52,7 +52,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 - 💬 Message and mention alerts *(on/off)* · 🤖 Automatic Rocket.Chat status *(on/off, off by default)* · 🟢 Change Rocket.Chat status
 - 🔐 Copy 2FA code · 🧘 Break reminders *(on/off)* · 🔌 Connect VPN · 📶 Check VPN · 😂 Joke · 🙈 Hide · Close
 
-The top-bar icon (when hidden) has *Come back now*, *Copy 2FA code* and *Close*.
+When the penguin is hidden, the top-bar icon has the same menu (plus *Come back now*). Answers to menu options then appear as GNOME notifications and the penguin stays hidden; important alerts (meetings, messages, VPN…) still bring it back.
 
 ## Features in detail
 
@@ -69,11 +69,11 @@ The top-bar icon (when hidden) has *Come back now*, *Copy 2FA code* and *Close*.
 - The calendar is only reachable through the VPN: without it, Pingu uses the last copy of today's calendar
 
 ### Rocket.Chat
-- **Messages and mentions**: direct messages, and `@you` / `@all` / `@here` in channels. Several at once are grouped in one bubble. Nothing is marked as read
+- **Messages and mentions**: direct messages, and `@you` / `@all` / `@here` in channels. Several at once are grouped in one bubble. Nothing is marked as read. Clicking the bubble brings to the front the browser window showing Rocket.Chat (or just the browser, if Rocket.Chat isn't the visible tab); it never opens a new tab. It recognises the Rocket.Chat tab because its title ends with the server's domain (e.g. `- chat.bsc.es`); if yours doesn't, set `ROCKET_CHAT_WINDOW_TITLE`
 - **Automatic status** (off by default): in a meeting → 🔴 *No molestar*; penguin hidden or clocked out → 🟡 *Ausente*; otherwise 🟢 *Disponible*. If you set another status by hand (or you're invisible) it leaves it alone until you're *Disponible* again
 
 ### VPN
-- Two checks: the tunnel interface (`ppp0`) is up, and internal machines answer over SSH (no login). It's only considered down when all of them fail
+- It checks whether internal machines answer over SSH (no login); it's only considered down when all of them fail. The tunnel interface (`ppp0`) just tells *how* you're connected: without it but with the machines answering, you're on the office network and the VPN isn't needed (🏢 bubble instead of 🔴)
 - When it drops, the red bubble says *click here to connect it*: it opens a terminal running `VPN_CONNECT_CMD`, where you type your passwords as usual. **Closing that terminal disconnects the VPN**
 
 ### Daily summary, breaks and alerts

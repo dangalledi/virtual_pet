@@ -68,3 +68,27 @@ def hm(secs: float) -> str:
     """Segundos → '6h 31min'."""
     secs = abs(int(secs))
     return f"{secs // 3600}h {(secs % 3600) // 60}min"
+
+
+# Títulos de ventana de navegadores (para traerlos al frente sin abrir pestañas)
+NAVEGADORES = ("Mozilla Firefox", "Google Chrome", "Chromium", "Brave", "Microsoft Edge")
+
+
+def activar_ventana(*patrones: str) -> bool:
+    """Trae al frente la primera ventana cuyo título contenga alguno de los patrones,
+    probándolos en orden. Usa wmctrl (X11). True si encontró alguna."""
+    try:
+        out = subprocess.run(["wmctrl", "-l"], capture_output=True, text=True, timeout=2)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    ventanas = []
+    for line in out.stdout.splitlines():
+        partes = line.split(None, 3)
+        if len(partes) == 4:
+            ventanas.append((partes[0], partes[3]))
+    for patron in patrones:
+        for wid, titulo in ventanas:
+            if patron.lower() in titulo.lower():
+                subprocess.run(["wmctrl", "-ia", wid], timeout=2)
+                return True
+    return False

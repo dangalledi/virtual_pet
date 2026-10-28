@@ -5,15 +5,16 @@ import random
 import datetime
 import threading
 from collections import deque
+from urllib.parse import urlparse
 
 import requests
 from PyQt5.QtWidgets import (QWidget, QLabel, QMenu, QDesktopWidget, QApplication,
                              QMessageBox, QSystemTrayIcon)
-from PyQt5.QtGui import (QPixmap, QTransform, QIcon, QImage, QPainter, QRegion, QBitmap,
-                         QDesktopServices)
-from PyQt5.QtCore import Qt, QTimer, QPoint, QUrl, pyqtSignal
+from PyQt5.QtGui import QPixmap, QTransform, QIcon, QImage, QPainter, QRegion, QBitmap
+from PyQt5.QtCore import Qt, QTimer, QPoint, pyqtSignal
 
-from utils import BASE_DIR, env_int, log, load_settings, save_settings
+from utils import (BASE_DIR, NAVEGADORES, activar_ventana, env, env_int, log,
+                   load_settings, save_settings)
 import calendario
 import dosfa
 import rocketchat
@@ -314,10 +315,15 @@ class PenguinCharacter(QWidget):
     # Menú (click derecho)
     # =======================================================================
     def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        self._llenar_menu(menu, en_barra=False)
+        menu.exec_(event.globalPos())
+
+    def _llenar_menu(self, menu: QMenu, en_barra: bool):
+        """Opciones del pingüino. Las usan el click derecho y el icono de la barra
+        (en_barra=True: con "Volver ahora" y sin "Esconderme")."""
         a = self.asistente
         w = a.woffu
-        menu = QMenu(self)
-        acciones = {}   # QAction → función a ejecutar
 
         def item(texto, func, checked=None, enabled=True, parent=menu):
             act = parent.addAction(texto)
@@ -325,9 +331,16 @@ class PenguinCharacter(QWidget):
                 act.setCheckable(True)
                 act.setChecked(checked)
             act.setEnabled(enabled)
-            acciones[act] = func
+            if en_barra:
+                # Tras usar una opción, el menú de la barra se rehace (marcas, textos…)
+                act.triggered.connect(lambda _=False: (func(), QTimer.singleShot(0, self._rehacer_menu_barra)))
+            else:
+                act.triggered.connect(lambda _=False: func())
             return act
 
+        if en_barra:
+            item("🐧 Volver ahora", self.show_from_tray)
+            menu.addSeparator()
         estado = menu.addAction(f"⏱ {self.woffu_status_text}")
         estado.setEnabled(False)
         menu.addSeparator()
@@ -375,12 +388,9 @@ class PenguinCharacter(QWidget):
             item("🔌 Conectar VPN", self.conectar_vpn)
         item("📶 Comprobar VPN", self._check_vpn_now)
         item("😂 Cuéntame un chiste", self._fetch_joke)
-        item(f"🙈 Esconderme {HIDE_MINUTES} min", self.hide_to_tray)
+        if not en_barra:
+            item(f"🙈 Esconderme {HIDE_MINUTES} min", self.hide_to_tray)
         item("Cerrar", self.close)
-
-        action = menu.exec_(event.globalPos())
-        if action in acciones:
-            acciones[action]()
 
     def _toggle(self, clave: str):
         """Activa/desactiva una opción del menú y la guarda en settings.json."""
@@ -422,7 +432,8 @@ class PenguinCharacter(QWidget):
 
     def _run_and_show(self, func, tipo: str = ""):
         """Ejecuta func (hace peticiones de red) en un hilo y muestra su texto."""
-        self.show_bubble("⏳ Consultando…", duration_ms=10000)
+        if self.isVisible():
+            self.show_bubble("⏳ Consultando…", duration_ms=10000)
         threading.Thread(target=lambda: self._bubble_ready.emit(func(), tipo), daemon=True).start()
 
     def _show_ready(self, texto: str, tipo: str):
@@ -450,9 +461,11 @@ class PenguinCharacter(QWidget):
 
     def conectar_vpn(self):
         """Abre una terminal con el comando de la VPN (las contraseñas las escribes tú)."""
-        if self.asistente.vpn.monitor.conectada:
-            self.show_bubble("🟢 La VPN ya está conectada", duration_ms=4000,
-                             theme=BubbleLabel.THEME_OK)
+        monitor = self.asistente.vpn.monitor
+        if monitor.conectada:
+            texto = ("🏢 Estás en la red de la oficina:\nno hace falta la VPN"
+                     if monitor.en_oficina else "🟢 La VPN ya está conectada")
+            self.show_bubble(texto, duration_ms=4000, theme=BubbleLabel.THEME_OK)
             return
         if vpn.conexion_en_marcha():
             self.show_bubble("⏳ Ya hay una conexión de VPN en marcha\n(mira la ventana «VPN»)",
@@ -492,14 +505,9 @@ class PenguinCharacter(QWidget):
         QTimer.singleShot(quedan * 1000 + 500, self._limpiar_2fa)
 
     def _aviso_2fa(self, texto: str, ms: int, error: bool = False):
-        """Globo del 2FA; si el pingüino está escondido, sale como notificación."""
-        if self.isVisible():
-            self.show_bubble(texto, duration_ms=ms or 3000,
-                             theme=BubbleLabel.THEME_ERROR if error else BubbleLabel.THEME_OK)
-        elif self.tray:
-            self.tray.showMessage("Código 2FA", texto,
-                                  QSystemTrayIcon.Warning if error else QSystemTrayIcon.Information,
-                                  ms or 3000)
+        """Globo del 2FA (si está escondido, show_bubble lo saca como notificación)."""
+        self.show_bubble(texto, duration_ms=ms or 3000,
+                         theme=BubbleLabel.THEME_ERROR if error else BubbleLabel.THEME_OK)
 
     def _limpiar_2fa(self):
         clip = QApplication.clipboard()
@@ -537,13 +545,16 @@ class PenguinCharacter(QWidget):
             return
         self.tray = QSystemTrayIcon(self._tray_icon(str(IMAGES_DIR / "penguin_idle_01.png")), self)
         self.tray.activated.connect(self._on_tray_activated)
-        menu = QMenu()
-        menu.addAction("🐧 Volver ahora", self.show_from_tray)
-        if dosfa.configurado():
-            menu.addAction("🔐 Copiar código 2FA", self.copiar_2fa)
-        menu.addAction("Cerrar", self.close)
-        self.tray.setContextMenu(menu)
-        self._tray_menu = menu   # mantener referencia
+        self._tray_menu = QMenu()   # mantener referencia
+        self.tray.setContextMenu(self._tray_menu)
+        self._rehacer_menu_barra()
+
+    def _rehacer_menu_barra(self):
+        """El menú del icono de la barra = el del click derecho (con lo de ahora mismo)."""
+        if not self.tray:
+            return
+        self._tray_menu.clear()
+        self._llenar_menu(self._tray_menu, en_barra=True)
 
     @staticmethod
     def _tray_icon(path: str) -> QIcon:
@@ -574,6 +585,7 @@ class PenguinCharacter(QWidget):
         vuelta = (datetime.datetime.now() + datetime.timedelta(minutes=HIDE_MINUTES)).strftime("%H:%M")
         if self.tray:
             self.tray.setToolTip(f"Pingüino escondido — vuelve a las {vuelta}")
+            self._rehacer_menu_barra()
             self.tray.show()
         if self.rc_client:
             self.estado_rc.actualizar(escondido=True)
@@ -620,11 +632,15 @@ class PenguinCharacter(QWidget):
 
     def _on_horas_actualizadas(self, texto: str):
         self.woffu_status_text = texto  # visible en el menú contextual
+        if not self.isVisible():
+            self._rehacer_menu_barra()  # la línea de estado del menú de la barra
 
     def _on_vpn_changed(self, conectada: bool, detalle: str = ""):
         # El aviso contrario ya no vale: fuera de la cola y, si está a la vista, se cierra
         self._descartar_avisos("vpn_off" if conectada else "vpn_on")
-        if conectada:
+        if conectada and detalle == vpn.OFICINA:
+            self.avisar("🏢 Estás en la red de la oficina:\nno hace falta la VPN", "vpn_on")
+        elif conectada:
             self.avisar("🟢 VPN conectada", "vpn_on")
         else:
             texto = "🔴 VPN desconectada"
@@ -684,8 +700,18 @@ class PenguinCharacter(QWidget):
         self.rc_worker.start()
 
     def _on_mensaje(self, texto: str, url: str):
-        self.avisar(texto + "\n\n(click aquí para abrirlo)", "mensaje",
-                    on_click=lambda: QDesktopServices.openUrl(QUrl(url)))
+        self.avisar(texto + "\n\n(click para ir al navegador)", "mensaje",
+                    on_click=self._ir_a_rocketchat)
+
+    def _ir_a_rocketchat(self):
+        """Trae al frente tu navegador sin abrir pestañas nuevas: la ventana que
+        tenga Rocket.Chat a la vista si la hay, y si no, la del navegador."""
+        # Las pestañas de Rocket.Chat acaban en "- chat.bsc.es" (el dominio de
+        # ROCKET_CHAT_URL), cambie como cambie el nombre del chat
+        dominio = urlparse(self.rc_client.url).hostname or ""
+        titulo_rc = env("ROCKET_CHAT_WINDOW_TITLE", dominio or "Rocket.Chat")
+        if not activar_ventana(titulo_rc, *NAVEGADORES):
+            log("[RC] No encontré la ventana del navegador")
 
     def _set_estado_manual(self, status: str):
         emoji, nombre = rocketchat.ESTADOS[status]
@@ -718,8 +744,15 @@ class PenguinCharacter(QWidget):
                     on_click=None, sticky: bool = False):
         """Muestra un globo encima del pingüino.
         duration_ms=0 → se cierra al hacer click (en él o fuera del pingüino).
-        duration_ms>0 → se cierra también solo tras ese tiempo."""
+        duration_ms>0 → se cierra también solo tras ese tiempo.
+        Si está escondido, sale como notificación y sigue escondido (los avisos
+        importantes pasan por avisar(), que sí lo hace volver)."""
         if not self.isVisible():
+            if self.tray:
+                icono = (QSystemTrayIcon.Warning if theme == BubbleLabel.THEME_ERROR
+                         else QSystemTrayIcon.Information)
+                self.tray.showMessage("Pingu", text, icono, duration_ms or 10000)
+                return
             self.show_from_tray()
 
         # Si había un aviso esperando click y esto lo tapa, se guarda para luego
