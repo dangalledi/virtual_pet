@@ -18,8 +18,9 @@ def interfaz() -> str:
 
 
 def hosts() -> list:
-    """Lista de (host, puerto) desde VPN_CHECK_HOSTS (host:puerto,host:puerto)."""
-    raw = env("VPN_CHECK_HOSTS", "opswebres01.bsc.es:22,opswebhpc01.bsc.es:22")
+    """Lista de (host, puerto) desde VPN_CHECK_HOSTS (host:puerto,host:puerto).
+    Vacío = solo se mira la interfaz (y no se puede saber si estás en la oficina)."""
+    raw = env("VPN_CHECK_HOSTS")
     result = []
     for h in raw.split(","):
         h = h.strip()

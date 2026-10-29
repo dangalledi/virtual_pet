@@ -18,6 +18,7 @@ import calendario
 import dosfa
 import rocketchat
 import chistes
+import mascotas
 import notas
 import postits
 import vpn
@@ -27,6 +28,9 @@ from globo import BubbleLabel
 
 # Tamaño del pingüino en píxeles (el sprite original es de 200)
 PENGUIN_SIZE = env_int("PENGUIN_SIZE", 100)
+# Alto de las otras mascotas (gato, pollo, pato): su dibujo ocupa todo el alto y el del
+# pingüino no (su PNG tiene mucho margen), así que con un 60 % quedan de un tamaño parecido
+MASCOTA_SIZE = env_int("MASCOTA_SIZE", PENGUIN_SIZE * 60 // 100)
 # Minutos que el pingüino se esconde en la barra con doble click
 HIDE_MINUTES = env_int("HIDE_MINUTES", 30)
 IMAGES_DIR = BASE_DIR / "images"
@@ -136,15 +140,40 @@ class PenguinCharacter(QWidget):
         frames = [self.loadImage(f"penguin_{prefix}_{i:02d}.png") for i in range(1, count + 1)]
         return [f for f in frames if f]
 
+    def mascota_actual(self) -> tuple:
+        """(clave, color) de la mascota elegida en el menú; ("pingu", "") por defecto."""
+        ajustes = getattr(self, "settings", None) or load_settings()
+        clave, _, color = ajustes.get("mascota", mascotas.PINGU).partition(":")
+        if clave != mascotas.PINGU and clave not in mascotas.CATALOGO:
+            return mascotas.PINGU, ""
+        return clave, color
+
     def loadAnimations(self):
-        self.animations = {
-            "idle":      self._frames("idle", 4),
-            "walk":      self._frames("walk", 8),
-            "jump":      self._frames("jump", 3),
-            "atack":     self._frames("atack", 3),
-            "pre_slide": self._frames("preslide", 1),
-            "slide":     self._frames("slide", 3),
-        }
+        clave, color = self.mascota_actual()
+        cargada = mascotas.cargar(clave, color, MASCOTA_SIZE) if clave != mascotas.PINGU else None
+        self.mascota_cargada = clave if cargada else mascotas.PINGU
+        if cargada:
+            self.animations, self.margen_arriba, ancho = cargada
+            alto = MASCOTA_SIZE
+        else:
+            ancho = alto = PENGUIN_SIZE
+            if clave != mascotas.PINGU:
+                log(f"[MASCOTA] No pude cargar {clave} {color}: vuelvo al pingüino")
+            self.animations = {
+                "idle":      self._frames("idle", 4),
+                "walk":      self._frames("walk", 8),
+                "jump":      self._frames("jump", 3),
+                "atack":     self._frames("atack", 3),
+                "pre_slide": self._frames("preslide", 1),
+                "slide":     self._frames("slide", 3),
+            }
+            # El sprite tiene margen transparente arriba (65 px a tamaño 200)
+            self.margen_arriba = 65 * PENGUIN_SIZE // 200
+        # La ventana se ajusta a la mascota sin moverla: mismo centro y mismo suelo
+        if (ancho, alto) != (self.width(), self.height()):
+            self.move(self.x() - (ancho - self.width()) // 2, self.y() - (alto - self.height()))
+            self.setFixedSize(ancho, alto)
+            self.label.setFixedSize(ancho, alto)
         self.current_frames = self.animations["idle"]
         self.current_frame_index = 0
         if self.current_frames:
@@ -387,6 +416,7 @@ class PenguinCharacter(QWidget):
 
         # --- Notas y recordatorios ---
         menu.addSeparator()
+        self._menu_mascota(menu.addMenu("🐾 Mascota"), item)
         self._menu_notas(menu.addMenu("📝 Notas y recordatorios"), item)
 
         # --- Bienestar y otros ---
@@ -402,6 +432,46 @@ class PenguinCharacter(QWidget):
         if not en_barra:
             item(f"🙈 Esconderme {HIDE_MINUTES} min", self.hide_to_tray)
         item("Cerrar", self.close)
+
+    def _menu_mascota(self, sub: QMenu, item):
+        actual = self.mascota_actual()
+        item(mascotas.nombre(mascotas.PINGU), lambda: self.cambiar_mascota(mascotas.PINGU, ""),
+             checked=actual[0] == mascotas.PINGU, parent=sub)
+        for clave, (texto, _, colores, _) in mascotas.CATALOGO.items():
+            ok = mascotas.disponible(clave)
+            if len(colores) == 1:
+                act = item(texto, lambda c=clave, col=colores[0]: self.cambiar_mascota(c, col),
+                           checked=actual[0] == clave, enabled=ok, parent=sub)
+            else:
+                colsub = sub.addMenu(texto)
+                colsub.setEnabled(ok)
+                act = colsub.menuAction()
+                for col in colores:
+                    item(mascotas.COLORES.get(col, col).capitalize(),
+                         lambda c=clave, col=col: self.cambiar_mascota(c, col),
+                         checked=actual == (clave, col) or (actual[0] == clave and not actual[1]
+                                                             and col == colores[0]),
+                         parent=colsub)
+            if not ok:
+                act.setToolTip("Instala la extensión vscode-pets en VS Code")
+                act.setText(texto + " (instala vscode-pets)")
+
+    def cambiar_mascota(self, clave: str, color: str):
+        anterior = self.settings.get("mascota", mascotas.PINGU)
+        self.settings["mascota"] = f"{clave}:{color}" if clave != mascotas.PINGU else clave
+        self.loadAnimations()
+        if self.mascota_cargada != clave:   # no se pudo: se queda la de antes
+            self.settings["mascota"] = anterior
+            self.loadAnimations()
+            texto, tema = "😕 No pude cargar esa mascota\n(mira pingu.log)", BubbleLabel.THEME_ERROR
+        else:
+            save_settings(self.settings)
+            texto = f"¡Hola! Ahora soy un {mascotas.nombre(clave, color).split(' ', 1)[1].lower()}"
+            tema = None
+        self.setState("idle")
+        if self.tray:
+            self.tray.setIcon(self._icono_mascota())
+        self.show_bubble(texto, duration_ms=4000, theme=tema)
 
     def _menu_notas(self, sub: QMenu, item):
         item("⏰ Recuérdame…", lambda: self._nueva_nota(recordatorio=True), parent=sub)
@@ -646,7 +716,7 @@ class PenguinCharacter(QWidget):
             else:
                 log("[TRAY] No hay bandeja del sistema (¿extensión AppIndicator desactivada?)")
             return
-        self.tray = QSystemTrayIcon(self._tray_icon(str(IMAGES_DIR / "penguin_idle_01.png")), self)
+        self.tray = QSystemTrayIcon(self._icono_mascota(), self)
         self.tray.activated.connect(self._on_tray_activated)
         self._tray_menu = QMenu()   # mantener referencia
         self.tray.setContextMenu(self._tray_menu)
@@ -659,11 +729,15 @@ class PenguinCharacter(QWidget):
         self._tray_menu.clear()
         self._llenar_menu(self._tray_menu, en_barra=True)
 
+    def _icono_mascota(self) -> QIcon:
+        if self.mascota_cargada == mascotas.PINGU or not self.animations.get("idle"):
+            return self._tray_icon(QImage(str(IMAGES_DIR / "penguin_idle_01.png")))
+        return self._tray_icon(self.animations["idle"][0].toImage())
+
     @staticmethod
-    def _tray_icon(path: str) -> QIcon:
+    def _tray_icon(img: QImage) -> QIcon:
         """Icono para la barra: recorta el margen transparente del sprite y lo deja
-        cuadrado, para que el pingüino ocupe todo el hueco del icono."""
-        img = QImage(path)
+        cuadrado, para que la mascota ocupe todo el hueco del icono."""
         if img.isNull():
             return QIcon()
         box = QRegion(QBitmap.fromImage(img.createAlphaMask())).boundingRect()
@@ -809,7 +883,7 @@ class PenguinCharacter(QWidget):
     def _ir_a_rocketchat(self):
         """Trae al frente tu navegador sin abrir pestañas nuevas: la ventana que
         tenga Rocket.Chat a la vista si la hay, y si no, la del navegador."""
-        # Las pestañas de Rocket.Chat acaban en "- chat.bsc.es" (el dominio de
+        # Las pestañas de Rocket.Chat acaban en "- chat.empresa.com" (el dominio de
         # ROCKET_CHAT_URL), cambie como cambie el nombre del chat
         dominio = urlparse(self.rc_client.url).hostname or ""
         titulo_rc = env("ROCKET_CHAT_WINDOW_TITLE", dominio or "Rocket.Chat")
@@ -872,9 +946,8 @@ class PenguinCharacter(QWidget):
         screen = QDesktopWidget().screenGeometry(self)
         bx = origin.x() + (self.width() - self.bubble.width()) // 2
         bx = max(screen.left(), min(bx, screen.right() - self.bubble.width()))
-        # El sprite tiene margen transparente arriba (65 px a tamaño 200):
-        # la punta del piquito queda justo encima de la cabeza
-        by = max(origin.y() - self.bubble.height() + 65 * PENGUIN_SIZE // 200, screen.top())
+        # La punta del piquito queda justo encima de la cabeza (el sprite tiene margen arriba)
+        by = max(origin.y() - self.bubble.height() + self.margen_arriba, screen.top())
         # El piquito apunta al centro del pingüino aunque el globo se haya desplazado
         self.bubble.tail_x = origin.x() + self.width() // 2 - bx
         self.bubble.move(bx, by)

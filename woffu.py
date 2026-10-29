@@ -13,7 +13,7 @@ class WoffuClient:
     INTENSIVA_END   = (9, 15)
 
     def __init__(self):
-        self.url      = env("WOFFU_URL", "https://bsc.woffu.com")
+        self.url      = env("WOFFU_URL").rstrip("/")   # https://tu_empresa.woffu.com
         self.email    = env("WOFFU_EMAIL")
         self.password = env("WOFFU_PASSWORD")
         self.horas_normal    = float(env("WOFFU_HOURS", "7"))
@@ -27,8 +27,8 @@ class WoffuClient:
 
     # --- Autenticación ---
     def auth(self) -> bool:
-        if not self.email or not self.password:
-            log("Woffu: WOFFU_EMAIL / WOFFU_PASSWORD no configurados en .env")
+        if not self.url or not self.email or not self.password:
+            log("Woffu: WOFFU_URL / WOFFU_EMAIL / WOFFU_PASSWORD no configurados en .env")
             return False
         try:
             resp = requests.post(f"{self.url}/token",

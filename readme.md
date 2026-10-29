@@ -51,6 +51,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 - Woffu status line · 📋 Daily summary · ⏱ Hours today · 🕒 Clock in/out · ☀️ Intensive schedule today · 🏖️ Team absences ▸ today / this week / next week
 - 📅 Today's meetings · 🔔 Meeting reminders *(on/off)*
 - 💬 Message and mention alerts *(on/off)* · 🤖 Automatic Rocket.Chat status *(on/off, off by default)* · 🟢 Change Rocket.Chat status
+- 🐾 Pet ▸ penguin / cat / chicken / duck
 - 📝 Notes and reminders ▸ remind me… / new note… / your notes (view, remind me in…, done)
 - 🔐 Copy 2FA code · 🧘 Break reminders *(on/off)* · 🔌 Connect VPN · 📶 Check VPN · 😂 Joke · 🙈 Hide · Close
 
@@ -71,7 +72,7 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 - The calendar is only reachable through the VPN: without it, Pingu uses the last copy of today's calendar
 
 ### Rocket.Chat
-- **Messages and mentions**: direct messages, and `@you` / `@all` / `@here` in channels. Several at once are grouped in one bubble. Nothing is marked as read. Clicking the bubble brings to the front the browser window showing Rocket.Chat (or just the browser, if Rocket.Chat isn't the visible tab); it never opens a new tab. It recognises the Rocket.Chat tab because its title ends with the server's domain (e.g. `- chat.bsc.es`); if yours doesn't, set `ROCKET_CHAT_WINDOW_TITLE`
+- **Messages and mentions**: direct messages, and `@you` / `@all` / `@here` in channels. Several at once are grouped in one bubble. Nothing is marked as read. Clicking the bubble brings to the front the browser window showing Rocket.Chat (or just the browser, if Rocket.Chat isn't the visible tab); it never opens a new tab. It recognises the Rocket.Chat tab because its title ends with the server's domain (e.g. `- chat.example.com`); if yours doesn't, set `ROCKET_CHAT_WINDOW_TITLE`
 - **Automatic status** (off by default): in a meeting → 🔴 *No molestar*; penguin hidden or clocked out → 🟡 *Ausente*; otherwise 🟢 *Disponible*. If you set another status by hand (or you're invisible) it leaves it alone until you're *Disponible* again
 
 ### VPN
@@ -84,6 +85,11 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 - Each note in the menu has its own submenu: view it, remind me in 15/30/60 min, remove the reminder, done
 - **Post-its on screen**: every note shows as a little yellow window (orange if it has a reminder, with its time). They only show while Pingu has the focus (click the penguin to see them; click another window and they hide). Drag them anywhere — they remember where you left them. **✓** = done. *Post-its always visible* in the submenu keeps them on screen all the time
 - Saved in `notas.json`, so they survive restarts; reminders missed while Pingu was closed show up when it starts
+
+### Pets
+- **🐾 Pet** in the menu swaps the penguin for a **cat** (6 colours), a **chicken** (3 colours) or a **rubber duck**, from [vscode-pets](https://github.com/tonybaloney/vscode-pets). It changes on the spot and is remembered
+- The animations are read from the vscode-pets extension if you have it installed in VS Code. Without it, the chicken and duck are downloaded from the repo into `mascotas_cache/`; the cat needs the extension (the repo keeps its artwork encrypted because of its licence). `VSCODE_PETS_MEDIA` points to another `media/` folder
+- Their drawings are not copied into this repo. Credits: cat by [seethingswarm](https://seethingswarm.itch.io/catset), rubber duck by [Marc Duiker](https://twitter.com/marcduiker), chicken from the [vscode-pets](https://github.com/tonybaloney/vscode-pets) project
 
 ### Daily summary, breaks and alerts
 - **Daily summary**: weekdays, the first time you're at the computer between 07:00 and 15:00 (once a day). On Mondays it adds the week's absences, on Fridays next week's
@@ -103,10 +109,11 @@ All settings live in `.env` (see `.env.example`). Besides the credentials above:
 | `REUNION_AVISO_MIN` | `10` | Minutes before a meeting to warn |
 | `RESUMEN_DESDE`, `RESUMEN_HASTA` | `07:00`, `15:00` | Time window for the daily summary |
 | `PAUSA_CADA_MIN`, `PAUSA_IDLE_MIN` | `45`, `5` | Break reminder interval / idle minutes that count as a break |
-| `VPN_INTERFACE`, `VPN_CHECK_HOSTS` | `ppp0`, two BSC hosts | How the VPN is checked |
+| `VPN_INTERFACE`, `VPN_CHECK_HOSTS` | `ppp0`, *(empty)* | How the VPN is checked: tunnel interface, and internal `host:port` machines answering SSH (empty = interface only, so Pingu can't tell you're at the office) |
 | `VPN_CONNECT_CMD` | *(empty)* | Command to connect the VPN (empty = no "Connect VPN") |
 | `TOTP_SECRET_FILE` | `~/.ssh/.2fa_secret` | 2FA secret file |
 | `PENGUIN_SIZE` | `100` | Penguin size in pixels |
+| `MASCOTA_SIZE` | 60 % of `PENGUIN_SIZE` | Height of the other pets (cat, chicken, duck) |
 | `HIDE_MINUTES` | `30` | Minutes it stays hidden after a double-click |
 
 Menu on/off choices are saved in `settings.json`. `.env`, `settings.json` and logs are git-ignored.
@@ -145,6 +152,7 @@ cp .env.example .env   # and fill it in
 | `estado_rc.py` | Automatic Rocket.Chat status rules |
 | `vpn.py` | VPN check and "Connect VPN" terminal |
 | `notas.py` | Notes and reminders: storage and the "new note" dialog |
+| `mascotas.py` | Other pets (vscode-pets animations) |
 | `postits.py` | On-screen post-its for the notes |
 | `chistes.py` | The penguin's joke collection (no repeats until it has told them all) |
 | `dosfa.py` | 2FA (TOTP) code with `oathtool` |

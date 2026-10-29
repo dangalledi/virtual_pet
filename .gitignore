@@ -46,3 +46,4 @@ config.json
 settings.json
 .pingu.lock
 notas.json
+mascotas_cache/

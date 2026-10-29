@@ -81,7 +81,10 @@ if [ -f "$INSTALL_DIR/.env" ]; then
 fi
 
 if [ "${SKIP_ENV:-0}" != "1" ]; then
-    ask "Email de Woffu (ej: nombre.apellido@bsc.es):"
+    ask "URL de Woffu de tu empresa (ej: https://tu_empresa.woffu.com):"
+    read -r WOFFU_URL
+
+    ask "Email de Woffu (ej: nombre.apellido@empresa.com):"
     read -r WOFFU_EMAIL
 
     ask "Contraseña de Woffu:"
@@ -104,9 +107,13 @@ if [ "${SKIP_ENV:-0}" != "1" ]; then
     read -r VPN_INTERFACE
     VPN_INTERFACE="${VPN_INTERFACE:-ppp0}"
 
+    ask "Máquinas internas para comprobar la VPN, host:puerto separados por comas"
+    ask "(ej: servidor1.empresa.com:22,servidor2.empresa.com:22; Enter = ninguna):"
+    read -r VPN_CHECK_HOSTS
+
     cat > "$INSTALL_DIR/.env" <<EOF
 # Woffu
-WOFFU_URL=https://bsc.woffu.com
+WOFFU_URL=${WOFFU_URL}
 WOFFU_EMAIL=${WOFFU_EMAIL}
 WOFFU_PASSWORD=${WOFFU_PASSWORD}
 WOFFU_HOURS=${WOFFU_HOURS}
@@ -118,7 +125,7 @@ LUNCH_REMINDER_MINUTES=${LUNCH_REMINDER_MINUTES}
 # VPN — interfaz de red que crea OpenFortiVPN
 VPN_INTERFACE=${VPN_INTERFACE}
 # VPN — máquinas internas que se prueban por SSH (caída solo si fallan todas)
-VPN_CHECK_HOSTS=opswebres01.bsc.es:22,opswebhpc01.bsc.es:22
+VPN_CHECK_HOSTS=${VPN_CHECK_HOSTS}
 EOF
     success ".env creado"
 fi
