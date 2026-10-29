@@ -7,7 +7,6 @@ import threading
 from collections import deque
 from urllib.parse import urlparse
 
-import requests
 from PyQt5.QtWidgets import (QWidget, QLabel, QMenu, QDesktopWidget, QApplication,
                              QMessageBox, QSystemTrayIcon)
 from PyQt5.QtGui import QPixmap, QTransform, QIcon, QImage, QPainter, QRegion, QBitmap
@@ -18,6 +17,9 @@ from utils import (BASE_DIR, NAVEGADORES, activar_ventana, env, env_int, log,
 import calendario
 import dosfa
 import rocketchat
+import chistes
+import notas
+import postits
 import vpn
 from asistente import AsistenteWorker
 from estado_rc import EstadoAuto
@@ -41,6 +43,7 @@ AVISOS = {
     "jornada": ("jump",  None,                    6000),
     "comida":  ("jump",  None,                    15000),
     "bano":    ("atack", None,                    8000),
+    "nota":    ("jump",  None,                    0),
 }
 
 # Velocidad de la animación (ms entre imágenes): quieto va más lento para gastar menos
@@ -53,6 +56,7 @@ OPCIONES_POR_DEFECTO = {
     "avisos_dm":        True,
     "pausas":           True,
     "estado_auto":      False,   # cambiar tu estado de Rocket.Chat solo es opcional
+    "postits_siempre":  False,   # post-its siempre a la vista (si no, solo con Pingu en foco)
 }
 
 # Si al código 2FA le quedan menos de estos segundos, se espera al siguiente
@@ -98,12 +102,14 @@ class PenguinCharacter(QWidget):
         self._fichaje_hecho.connect(self._on_fichaje_hecho)
 
         self.settings = load_settings()
+        self.notas = notas.cargar()   # antes que la barra, que las pone en su menú
         self.woffu_status_text = "Woffu: cargando..."
 
         self.setupTimer()
         self._start_rocketchat()
         self._start_asistente()
         self._setup_tray()
+        self._start_notas()
 
     # =======================================================================
     # Ventana y animaciones
@@ -280,6 +286,7 @@ class PenguinCharacter(QWidget):
         self.mousePressEvent(event)
 
     def mousePressEvent(self, event):
+        self.activateWindow()   # coger el foco: así se ven los post-its
         if event.button() == Qt.LeftButton:
             self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
             self._click_count += 1
@@ -378,6 +385,10 @@ class PenguinCharacter(QWidget):
             for status, (emoji, nombre) in rocketchat.ESTADOS.items():
                 item(f"{emoji} {nombre}", lambda s=status: self._set_estado_manual(s), parent=sub)
 
+        # --- Notas y recordatorios ---
+        menu.addSeparator()
+        self._menu_notas(menu.addMenu("📝 Notas y recordatorios"), item)
+
         # --- Bienestar y otros ---
         menu.addSeparator()
         if dosfa.configurado():
@@ -391,6 +402,26 @@ class PenguinCharacter(QWidget):
         if not en_barra:
             item(f"🙈 Esconderme {HIDE_MINUTES} min", self.hide_to_tray)
         item("Cerrar", self.close)
+
+    def _menu_notas(self, sub: QMenu, item):
+        item("⏰ Recuérdame…", lambda: self._nueva_nota(recordatorio=True), parent=sub)
+        item("📝 Nueva nota…", lambda: self._nueva_nota(recordatorio=False), parent=sub)
+        sub.addSeparator()
+        item("📌 Post-its siempre a la vista", lambda: self._toggle("postits_siempre"),
+             checked=self.opcion("postits_siempre"), parent=sub)
+        if not self.notas:
+            return
+        item("👀 Verlas todas", lambda: self.show_bubble(notas.texto_lista(self.notas)), parent=sub)
+        sub.addSeparator()
+        for nota in notas.ordenadas(self.notas):
+            una = sub.addMenu(notas.etiqueta(nota))
+            item("👀 Ver", lambda n=nota: self.show_bubble("📝 " + n["texto"]), parent=una)
+            for nombre, minutos in notas.POSPONER:
+                item(f"⏰ Avisarme {nombre.lower()}",
+                     lambda n=nota, m=minutos: self._avisar_nota_en(n, m), parent=una)
+            if nota.get("aviso"):
+                item("🔕 Quitar el aviso", lambda n=nota: self._avisar_nota_en(n, None), parent=una)
+            item("✅ Hecho (borrar)", lambda n=nota: self._borrar_nota(n), parent=una)
 
     def _toggle(self, clave: str):
         """Activa/desactiva una opción del menú y la guarda en settings.json."""
@@ -422,6 +453,8 @@ class PenguinCharacter(QWidget):
         if self.rc_client:
             self.rc_worker.activo = self.opcion("avisos_dm")
             self.estado_rc.activo = self.opcion("estado_auto")
+        if hasattr(self, "tablero"):
+            self._revisar_foco()
 
     def _toggle_intensiva(self):
         w = self.asistente.woffu
@@ -441,23 +474,93 @@ class PenguinCharacter(QWidget):
         self.show_bubble(texto, theme=AVISOS[tipo][1] if tipo else None)
 
     def _fetch_joke(self):
-        """Pide un chiste a la API en un hilo y lo muestra en la burbuja."""
-        def fetch():
-            try:
-                resp = requests.get("https://v2.jokeapi.dev/joke/Any",
-                                    params={"lang": "es", "type": "single", "safe-mode": "",
-                                            "blacklistFlags": "nsfw,sexist,explicit"},
-                                    timeout=5)
-                resp.raise_for_status()
-                data = resp.json()
-                if data.get("error"):
-                    raise ValueError(data.get("message", "API error"))
-                joke = data.get("joke") or f"{data.get('setup', '')}\n\n— {data.get('delivery', '')}"
-            except Exception as e:
-                log(f"[JOKE] Error: {e}")
-                joke = "😅 No pude cargar un chiste... ¡pero tú eres gracioso/a!"
-            self._bubble_ready.emit(joke, "")
-        threading.Thread(target=fetch, daemon=True).start()
+        """Cuenta un chiste: primero el planteamiento y, un momento después, el remate."""
+        planteamiento, remate = chistes.siguiente(self.settings)
+        save_settings(self.settings)
+        self.show_bubble("😄 " + planteamiento + ("\n\n…" if remate else ""))
+        if not remate:
+            return
+        globo = self.bubble
+
+        def remata():
+            # Solo si sigue a la vista el mismo globo (no lo has cerrado ni lo ha tapado otro aviso)
+            if self.bubble is globo and globo is not None:
+                self.show_bubble("😄 " + planteamiento + "\n\n" + remate)
+        QTimer.singleShot(2500, remata)
+
+    # =======================================================================
+    # Notas y recordatorios
+    # =======================================================================
+    def _start_notas(self):
+        self.tablero = postits.Tablero(on_hecho=self._borrar_nota, on_movido=self._postit_movido)
+        self.tablero.sincronizar(self.notas)
+        # Post-its a la vista solo mientras alguna ventana de Pingu tiene el foco.
+        # Se espera un poco antes de esconderlos: al pasar el foco del pingüino a un
+        # post-it (para arrastrarlo) la aplicación queda "inactiva" un instante.
+        self._foco_timer = QTimer(self)
+        self._foco_timer.setSingleShot(True)
+        self._foco_timer.timeout.connect(self._revisar_foco)
+        QApplication.instance().applicationStateChanged.connect(
+            lambda _estado: self._foco_timer.start(250))
+        self._revisar_foco()
+        self._notas_timer = QTimer(self)
+        self._notas_timer.timeout.connect(self._revisar_notas)
+        self._notas_timer.start(20000)
+        QTimer.singleShot(3000, self._revisar_notas)   # los que vencieron con el pingüino cerrado
+
+    def _revisar_notas(self):
+        ahora = datetime.datetime.now()
+        vencidas = notas.vencidas(self.notas)
+        for texto, cuando in vencidas:
+            aviso = f"⏰ ¡Acuérdate!\n\n{texto}"
+            if ahora - cuando > datetime.timedelta(minutes=5):
+                aviso += f"\n\n(era para las {cuando.strftime('%H:%M')})"
+            log(f"[NOTAS] Aviso: {texto!r}")
+            self.avisar(aviso, "nota")
+        if vencidas:
+            self._notas_cambiadas()
+        if not self.isVisible():
+            self._rehacer_menu_barra()
+
+    def _nueva_nota(self, recordatorio: bool):
+        dialogo = notas.DialogoNota(recordatorio, parent=self if self.isVisible() else None)
+        dialogo.activateWindow()
+        if dialogo.exec_() != notas.DialogoNota.Accepted:
+            return
+        texto, aviso = dialogo.texto.text(), dialogo.aviso()
+        notas.nueva(self.notas, texto, aviso, fija=not recordatorio)
+        self._notas_cambiadas()
+        if aviso:
+            dia = "" if aviso.date() == datetime.date.today() else "mañana "
+            self.show_bubble(f"⏰ Vale, te aviso {dia}a las {aviso.strftime('%H:%M')}",
+                             duration_ms=4000, theme=BubbleLabel.THEME_OK)
+        else:
+            self.show_bubble("📝 Apuntado", duration_ms=3000, theme=BubbleLabel.THEME_OK)
+
+    def _avisar_nota_en(self, nota: dict, minutos):
+        notas.poner_aviso(self.notas, nota, notas.en_minutos(minutos) if minutos else None)
+        self._notas_cambiadas()
+        texto = f"⏰ Te aviso en {minutos} min" if minutos else "🔕 Aviso quitado"
+        self.show_bubble(texto, duration_ms=3000, theme=BubbleLabel.THEME_OK)
+
+    def _borrar_nota(self, nota: dict):
+        notas.borrar(self.notas, nota)
+        self._notas_cambiadas()
+        self.show_bubble("✅ ¡Una cosa menos!", duration_ms=3000, theme=BubbleLabel.THEME_OK)
+
+    def _revisar_foco(self):
+        activa = QApplication.applicationState() == Qt.ApplicationActive
+        self.tablero.mostrar(self.opcion("postits_siempre") or activa)
+
+    def _notas_cambiadas(self):
+        """Pone los post-its (y el menú de la barra) al día con la lista de notas."""
+        self.tablero.sincronizar(self.notas)
+        if not self.isVisible():
+            self._rehacer_menu_barra()
+
+    def _postit_movido(self, nota: dict, x: int, y: int):
+        nota["pos"] = [x, y]
+        notas.guardar(self.notas)
 
     def conectar_vpn(self):
         """Abre una terminal con el comando de la VPN (las contraseñas las escribes tú)."""

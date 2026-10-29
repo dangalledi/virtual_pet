@@ -45,3 +45,4 @@ config.json
 # Preferencias del menú
 settings.json
 .pingu.lock
+notas.json

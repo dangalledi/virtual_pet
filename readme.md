@@ -14,7 +14,8 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 - 💬 **Rocket.Chat** — bubble with direct messages and mentions (click it to bring your browser to the front — no new tabs); optional automatic status (meeting → *No molestar*, away → *Ausente*)
 - 🔌 **VPN** — warns you when the VPN drops and opens a terminal to reconnect it with one click
 - ☀️ **Daily summary** — each workday morning: clock-in, leave time, meetings and absences (the whole week on Mondays, next week on Fridays)
-- 🧘 **Breaks** — reminds you to stand up after 90 min of continuous use
+- 🧘 **Breaks** — reminds you to stand up after 45 min of continuous use
+- 📝 **Notes and reminders** — "remind me in 15 min to…" and sticky notes, shown on screen as post-its
 - 🔐 **2FA** — copies your TOTP code to the clipboard (like the `my2fa` alias)
 - 🙈 **Hide** — double-click and it hides next to the clock for 30 min
 
@@ -40,7 +41,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 |---|---|
 | Drag | Move the penguin |
 | Double-click | Hide it in the top bar for 30 min (click the bar icon to bring it back) |
-| Triple-click | Tells a joke |
+| Triple-click | Tells a joke (from its own collection, no repeats until it has told them all) |
 | Right-click | Menu with everything below |
 | Click a bubble | Closes it (and brings the browser to the front / connects the VPN / copies the code, if the bubble says so) |
 | `←` `→` `↑` `↓` `A` | Walk, jump, slide, attack |
@@ -50,6 +51,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 - Woffu status line · 📋 Daily summary · ⏱ Hours today · 🕒 Clock in/out · ☀️ Intensive schedule today · 🏖️ Team absences ▸ today / this week / next week
 - 📅 Today's meetings · 🔔 Meeting reminders *(on/off)*
 - 💬 Message and mention alerts *(on/off)* · 🤖 Automatic Rocket.Chat status *(on/off, off by default)* · 🟢 Change Rocket.Chat status
+- 📝 Notes and reminders ▸ remind me… / new note… / your notes (view, remind me in…, done)
 - 🔐 Copy 2FA code · 🧘 Break reminders *(on/off)* · 🔌 Connect VPN · 📶 Check VPN · 😂 Joke · 🙈 Hide · Close
 
 When the penguin is hidden, the top-bar icon has the same menu (plus *Come back now*). Answers to menu options then appear as GNOME notifications and the penguin stays hidden; important alerts (meetings, messages, VPN…) still bring it back.
@@ -76,9 +78,16 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 - It checks whether internal machines answer over SSH (no login); it's only considered down when all of them fail. The tunnel interface (`ppp0`) just tells *how* you're connected: without it but with the machines answering, you're on the office network and the VPN isn't needed (🏢 bubble instead of 🔴)
 - When it drops, the red bubble says *click here to connect it*: it opens a terminal running `VPN_CONNECT_CMD`, where you type your passwords as usual. **Closing that terminal disconnects the VPN**
 
+### Notes and reminders
+- **⏰ Remind me…**: type what (e.g. *call Marta*) and when: in 5/15/30 min, 1/2 hours, or at a given time (if that time has passed, tomorrow). When it goes off it disappears
+- **📝 New note…**: a sticky note that stays in the list until you mark it **✅ Done**. It can have a reminder too; after it goes off, the note stays
+- Each note in the menu has its own submenu: view it, remind me in 15/30/60 min, remove the reminder, done
+- **Post-its on screen**: every note shows as a little yellow window (orange if it has a reminder, with its time). They only show while Pingu has the focus (click the penguin to see them; click another window and they hide). Drag them anywhere — they remember where you left them. **✓** = done. *Post-its always visible* in the submenu keeps them on screen all the time
+- Saved in `notas.json`, so they survive restarts; reminders missed while Pingu was closed show up when it starts
+
 ### Daily summary, breaks and alerts
 - **Daily summary**: weekdays, the first time you're at the computer between 07:00 and 15:00 (once a day). On Mondays it adds the week's absences, on Fridays next week's
-- **Breaks**: after 90 min using keyboard/mouse without a 5-min pause (uses GNOME's idle monitor). Not during meetings or after clocking out
+- **Breaks**: after 45 min using keyboard/mouse without a 5-min pause (uses GNOME's idle monitor). Not during meetings or after clocking out
 - **Alert queue**: important alerts stay until you click them; if several arrive at once they wait in line
 - **2FA**: if the code expires in less than 5 s it waits for the next one, and clears it from the clipboard when it expires
 
@@ -93,7 +102,7 @@ All settings live in `.env` (see `.env.example`). Besides the credentials above:
 | `RECORDATORIO_ENTRADA`, `RECORDATORIO_SALIDA`, `RECORDATORIO_SALIDA_FIN` | `10:00`, `18:30`, `21:00` | Clock-in / clock-out reminder times |
 | `REUNION_AVISO_MIN` | `10` | Minutes before a meeting to warn |
 | `RESUMEN_DESDE`, `RESUMEN_HASTA` | `07:00`, `15:00` | Time window for the daily summary |
-| `PAUSA_CADA_MIN`, `PAUSA_IDLE_MIN` | `90`, `5` | Break reminder interval / idle minutes that count as a break |
+| `PAUSA_CADA_MIN`, `PAUSA_IDLE_MIN` | `45`, `5` | Break reminder interval / idle minutes that count as a break |
 | `VPN_INTERFACE`, `VPN_CHECK_HOSTS` | `ppp0`, two BSC hosts | How the VPN is checked |
 | `VPN_CONNECT_CMD` | *(empty)* | Command to connect the VPN (empty = no "Connect VPN") |
 | `TOTP_SECRET_FILE` | `~/.ssh/.2fa_secret` | 2FA secret file |
@@ -135,6 +144,9 @@ cp .env.example .env   # and fill it in
 | `rocketchat.py` | Rocket.Chat client and message/mention watcher |
 | `estado_rc.py` | Automatic Rocket.Chat status rules |
 | `vpn.py` | VPN check and "Connect VPN" terminal |
+| `notas.py` | Notes and reminders: storage and the "new note" dialog |
+| `postits.py` | On-screen post-its for the notes |
+| `chistes.py` | The penguin's joke collection (no repeats until it has told them all) |
 | `dosfa.py` | 2FA (TOTP) code with `oathtool` |
 | `utils.py` | `.env`, logging, saved settings, idle time |
 

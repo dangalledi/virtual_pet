@@ -64,7 +64,7 @@ class AsistenteWorker(QThread):
 
         # Pausas: tras PAUSA_CADA_MIN de uso continuo; cuenta como pausa
         # estar PAUSA_IDLE_MIN sin tocar teclado ni ratón
-        self.pausa_cada   = env_int("PAUSA_CADA_MIN", 90)
+        self.pausa_cada   = env_int("PAUSA_CADA_MIN", 45)
         self.pausa_idle   = env_int("PAUSA_IDLE_MIN", 5)
         self._activo_desde = None
 
