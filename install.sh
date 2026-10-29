@@ -111,6 +111,17 @@ if [ "${SKIP_ENV:-0}" != "1" ]; then
     ask "(ej: servidor1.empresa.com:22,servidor2.empresa.com:22; Enter = ninguna):"
     read -r VPN_CHECK_HOSTS
 
+    echo ""
+    ask "Código 2FA: fichero con tu secreto TOTP en base32 (ej: ~/.ssh/.2fa_secret; Enter = sin 2FA):"
+    read -r TOTP_SECRET_FILE
+    if [ -n "$TOTP_SECRET_FILE" ]; then
+        if [ ! -f "${TOTP_SECRET_FILE/#\~/$HOME}" ]; then
+            warn "No existe $TOTP_SECRET_FILE: créalo con tu secreto y la opción aparecerá en el menú."
+        fi
+        command -v oathtool &>/dev/null \
+            || warn "Falta oathtool para el 2FA: sudo apt install oathtool"
+    fi
+
     cat > "$INSTALL_DIR/.env" <<EOF
 # Woffu
 WOFFU_URL=${WOFFU_URL}
@@ -126,6 +137,9 @@ LUNCH_REMINDER_MINUTES=${LUNCH_REMINDER_MINUTES}
 VPN_INTERFACE=${VPN_INTERFACE}
 # VPN — máquinas internas que se prueban por SSH (caída solo si fallan todas)
 VPN_CHECK_HOSTS=${VPN_CHECK_HOSTS}
+
+# Código 2FA: fichero con el secreto TOTP en base32 (vacío = sin opción de 2FA)
+TOTP_SECRET_FILE=${TOTP_SECRET_FILE}
 EOF
     success ".env creado"
 fi

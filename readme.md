@@ -31,7 +31,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
    | Meeting reminders | `SOGO_USER`, `SOGO_PASSWORD`, `SOGO_CALENDAR_URL` |
    | Rocket.Chat messages and status | `ROCKET_CHAT_URL`, `ROCKET_CHAT_APP_ID`, `ROCKET_CHAT_APP_SECRET` |
    | "Connect VPN" button | `VPN_CONNECT_CMD` |
-   | 2FA code | an `oathtool` secret file (default `~/.ssh/.2fa_secret`) |
+   | 2FA code | `TOTP_SECRET_FILE` (a file with your base32 TOTP secret) + `oathtool` |
 
 3. Run: `./run.sh` — then **right-click the penguin** to see everything it can do. Options you turn on/off in the menu are remembered.
 
@@ -111,7 +111,7 @@ All settings live in `.env` (see `.env.example`). Besides the credentials above:
 | `PAUSA_CADA_MIN`, `PAUSA_IDLE_MIN` | `45`, `5` | Break reminder interval / idle minutes that count as a break |
 | `VPN_INTERFACE`, `VPN_CHECK_HOSTS` | `ppp0`, *(empty)* | How the VPN is checked: tunnel interface, and internal `host:port` machines answering SSH (empty = interface only, so Pingu can't tell you're at the office) |
 | `VPN_CONNECT_CMD` | *(empty)* | Command to connect the VPN (empty = no "Connect VPN") |
-| `TOTP_SECRET_FILE` | `~/.ssh/.2fa_secret` | 2FA secret file |
+| `TOTP_SECRET_FILE` | *(empty)* | 2FA secret file (empty = no 2FA option; it also hides if the file has no valid base32 secret or `oathtool` is missing — the reason goes to `pingu.log`) |
 | `PENGUIN_SIZE` | `100` | Penguin size in pixels |
 | `MASCOTA_SIZE` | 60 % of `PENGUIN_SIZE` | Height of the other pets (cat, chicken, duck) |
 | `HIDE_MINUTES` | `30` | Minutes it stays hidden after a double-click |
