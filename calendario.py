@@ -4,7 +4,6 @@ SOGO_CALENDAR_URL admite varios calendarios separados por comas: se juntan sus r
 Adaptado del whisperer_bot. Las funciones devuelven None si la consulta falla,
 para que quien llame decida si usar la última copia buena.
 """
-import os
 import time
 import datetime
 import xml.etree.ElementTree as ET
@@ -13,14 +12,10 @@ import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from icalendar import Calendar
 
-from utils import log
+from utils import con_usuario, env, log, usuario
 
 SOGO_CACHE_TTL = 600    # segundos de validez de la copia del calendario de hoy
 ICAL_CACHE_TTL = 600
-
-
-def _env(name: str) -> str:
-    return os.getenv(name, "").split(" #")[0].strip()
 
 
 def _to_local_naive(value, end_of_day: bool = False) -> datetime.datetime:
@@ -38,16 +33,21 @@ def _to_local_naive(value, end_of_day: bool = False) -> datetime.datetime:
 # ---------------------------------------------------------------------------
 def sogo_urls() -> list:
     """Calendarios de SOGO_CALENDAR_URL (uno o varios separados por comas)."""
-    return [u.strip() for u in _env("SOGO_CALENDAR_URL").split(",") if u.strip()]
+    return [con_usuario(u.strip()) for u in env("SOGO_CALENDAR_URL").split(",") if u.strip()]
 
 
 def sogo_configurado() -> bool:
-    return bool(sogo_urls() and _env("SOGO_USER") and _env("SOGO_PASSWORD"))
+    return bool(sogo_urls() and env("SOGO_PASSWORD"))
+
+
+def sogo_user() -> str:
+    """Usuario de SOGo: SOGO_USER si lo pones; si no, tu usuario LDAP."""
+    return env("SOGO_USER") or usuario()
 
 
 def _sogo_request(method: str, url: str, body: str, depth: str) -> requests.Response:
     """Petición CalDAV con tu usuario de SOGo (Basic y, si no vale, Digest)."""
-    user, password = _env("SOGO_USER"), _env("SOGO_PASSWORD")
+    user, password = sogo_user(), env("SOGO_PASSWORD")
     headers = {"Content-Type": "application/xml; charset=utf-8", "Depth": depth}
     resp = None
     for auth in (HTTPBasicAuth(user, password), HTTPDigestAuth(user, password)):
@@ -213,7 +213,7 @@ AUSENCIA_PENDIENTE  = "Procesando Ausencia"   # pedida, aún sin aprobar
 
 
 def ausencias_configurado() -> bool:
-    return bool(_env("WOFFU_ICAL_URL"))
+    return bool(env("WOFFU_ICAL_URL"))
 
 
 def _eventos_ausencia() -> list:
@@ -222,7 +222,7 @@ def _eventos_ausencia() -> list:
     global _ical_cache
     if _ical_cache and time.time() - _ical_cache[0] < ICAL_CACHE_TTL:
         return _ical_cache[1]
-    resp = requests.get(_env("WOFFU_ICAL_URL"), timeout=30)
+    resp = requests.get(env("WOFFU_ICAL_URL"), timeout=30)
     resp.raise_for_status()
     events = []
     for comp in Calendar.from_ical(resp.content).walk("VEVENT"):

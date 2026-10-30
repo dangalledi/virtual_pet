@@ -182,7 +182,7 @@ class AsistenteWorker(QThread):
 
     def reuniones_texto(self) -> str:
         if not calendario.sogo_configurado():
-            return "❌ Falta SOGO_CALENDAR_URL / SOGO_USER / SOGO_PASSWORD en el .env"
+            return "❌ Falta SOGO_CALENDAR_URL / SOGO_PASSWORD (y LDAP_USER) en el .env"
         events = self._reuniones(forzar=True)
         sin_vpn = self.vpn.monitor.conectada is False
         if events is None:

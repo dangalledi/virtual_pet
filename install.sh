@@ -13,6 +13,8 @@ success() { echo -e "${GREEN}${BOLD}[✓]${NC} $*"; }
 warn()    { echo -e "${YELLOW}${BOLD}[!]${NC} $*"; }
 error()   { echo -e "${RED}${BOLD}[✗]${NC} $*"; exit 1; }
 ask()     { echo -e "${YELLOW}${BOLD}[?]${NC} $*"; }
+# Valor entre comillas para el .env: así aguanta #, $, espacios y comillas (contraseñas)
+q()       { local v=${1//\\/\\\\}; v=${v//\"/\\\"}; printf '"%s"' "$v"; }
 
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -81,6 +83,10 @@ if [ -f "$INSTALL_DIR/.env" ]; then
 fi
 
 if [ "${SKIP_ENV:-0}" != "1" ]; then
+    ask "Tu usuario de la empresa / LDAP (Enter = $USER):"
+    read -r LDAP_USER
+    LDAP_USER="${LDAP_USER:-$USER}"
+
     ask "URL de Woffu de tu empresa (ej: https://tu_empresa.woffu.com):"
     read -r WOFFU_URL
 
@@ -112,6 +118,21 @@ if [ "${SKIP_ENV:-0}" != "1" ]; then
     read -r VPN_CHECK_HOSTS
 
     echo ""
+    echo -e "${BOLD}── Reuniones (SOGo, opcional) ──────────────${NC}"
+    ask "Servidor de calendario SOGo (ej: https://calendar.empresa.com; Enter = sin reuniones):"
+    read -r SOGO_SERVER
+    SOGO_CALENDAR_URL=""
+    SOGO_PASSWORD=""
+    if [ -n "$SOGO_SERVER" ]; then
+        # {usuario} se cambia por LDAP_USER al arrancar
+        SOGO_CALENDAR_URL="${SOGO_SERVER%/}/SOGo/dav/{usuario}/Calendar/personal/"
+        ask "Contraseña de SOGo (normalmente la de LDAP):"
+        read -rs SOGO_PASSWORD
+        echo ""
+        info "Calendarios compartidos del equipo: añádelos luego a SOGO_CALENDAR_URL en .env"
+    fi
+
+    echo ""
     ask "Código 2FA: fichero con tu secreto TOTP en base32 (ej: ~/.ssh/.2fa_secret; Enter = sin 2FA):"
     read -r TOTP_SECRET_FILE
     if [ -n "$TOTP_SECRET_FILE" ]; then
@@ -123,11 +144,18 @@ if [ "${SKIP_ENV:-0}" != "1" ]; then
     fi
 
     cat > "$INSTALL_DIR/.env" <<EOF
+# Tu usuario de la empresa (LDAP). Donde ponga {usuario} se cambia por este
+LDAP_USER=${LDAP_USER}
+
 # Woffu
 WOFFU_URL=${WOFFU_URL}
 WOFFU_EMAIL=${WOFFU_EMAIL}
-WOFFU_PASSWORD=${WOFFU_PASSWORD}
+WOFFU_PASSWORD=$(q "$WOFFU_PASSWORD")
 WOFFU_HOURS=${WOFFU_HOURS}
+
+# Calendario de reuniones (SOGo). Varios calendarios separados por comas
+SOGO_CALENDAR_URL=${SOGO_CALENDAR_URL}
+SOGO_PASSWORD=$(q "$SOGO_PASSWORD")
 
 # Aviso de comida
 LUNCH_TIME=${LUNCH_TIME}

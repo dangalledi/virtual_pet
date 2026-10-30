@@ -22,13 +22,15 @@ class WoffuClient:
         self.token   = None
         self.user_id = None
         self.clocked_in = None         # último estado conocido (None = desconocido)
+        self.error = ""                # por qué falló el último login (para enseñarlo)
         self.session = requests.Session()
         self._lock   = threading.Lock()   # lo usan el hilo del asistente y los del menú
 
     # --- Autenticación ---
     def auth(self) -> bool:
         if not self.url or not self.email or not self.password:
-            log("Woffu: WOFFU_URL / WOFFU_EMAIL / WOFFU_PASSWORD no configurados en .env")
+            self.error = "falta WOFFU_URL / WOFFU_EMAIL / WOFFU_PASSWORD en el .env"
+            log(f"Woffu: {self.error}")
             return False
         try:
             resp = requests.post(f"{self.url}/token",
@@ -38,10 +40,18 @@ class WoffuClient:
                                  timeout=10)
             if not resp.ok:
                 log(f"Woffu auth HTTP {resp.status_code}: {resp.text[:200]}")
+                if resp.status_code in (400, 401):
+                    self.error = ("email o contraseña incorrectos\n"
+                                  "(revisa WOFFU_EMAIL y WOFFU_PASSWORD en el .env)")
+                elif resp.status_code == 404:
+                    self.error = f"no encuentro Woffu en {self.url}\n(revisa WOFFU_URL)"
+                else:
+                    self.error = f"Woffu respondió con error {resp.status_code}"
                 return False
             self.token = resp.json().get("access_token")
             if not self.token:
-                log("Woffu: token no recibido")
+                self.error = "Woffu no devolvió sesión (¿WOFFU_URL correcta?)"
+                log(f"Woffu: {self.error}")
                 return False
             self.session.headers.update({"Authorization": f"Bearer {self.token}"})
 
@@ -56,11 +66,18 @@ class WoffuClient:
             else:
                 self.user_id = users.get("UserId") or users.get("userId")
             if not self.user_id:
-                log("Woffu: no se pudo obtener userId")
+                self.error = "no pude saber tu usuario de Woffu"
+                log(f"Woffu: {self.error}")
                 return False
+            self.error = ""
             log(f"Woffu autenticado (userId={self.user_id})")
             return True
+        except requests.RequestException as e:
+            self.error = "no puedo conectar con Woffu (¿red o WOFFU_URL?)"
+            log(f"Woffu auth error: {e}")
+            return False
         except Exception as e:
+            self.error = "respuesta rara de Woffu (mira pingu.log)"
             log(f"Woffu auth error: {e}")
             return False
 
@@ -132,7 +149,7 @@ class WoffuClient:
     def horas_detalle(self) -> str:
         """Resumen completo del día para la burbuja (como /horas del whisperer)."""
         if not self.conectado():
-            return "⚪ Woffu: sin conexión"
+            return f"⚪ Woffu: {self.error or 'sin conexión'}"
         try:
             times = self.fichajes_hoy()
         except Exception as e:
@@ -162,7 +179,7 @@ class WoffuClient:
         """Registra un fichaje en Woffu. Devuelve (mensaje, ok, fue_salida)."""
         try:
             if not self.conectado():
-                return "❌ No hay conexión con Woffu.", False, False
+                return f"❌ Woffu: {self.error or 'sin conexión'}", False, False
             with self._lock:
                 resp = self._request("POST", "/api/signs", json={"UserId": self.user_id})
             resp.raise_for_status()

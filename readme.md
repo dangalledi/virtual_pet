@@ -26,11 +26,12 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 
    | To get… | Fill in |
    |---|---|
-   | Woffu hours, clock in/out, reminders | `WOFFU_EMAIL`, `WOFFU_PASSWORD` |
+   | Your company (LDAP) username | `LDAP_USER` — wherever `{usuario}` appears (calendar URL, VPN command) it is replaced by this. Empty = your Linux username |
+   | Woffu hours, clock in/out, reminders | `WOFFU_EMAIL`, `WOFFU_PASSWORD` (in double quotes if it has symbols like `#`, `$` or spaces) |
    | Team absences (today, this week, next week) | `WOFFU_ICAL_URL` |
-   | Meeting reminders | `SOGO_USER`, `SOGO_PASSWORD`, `SOGO_CALENDAR_URL` (one or more calendars, comma-separated) |
+   | Meeting reminders | `SOGO_PASSWORD`, `SOGO_CALENDAR_URL` (one or more calendars, comma-separated; yours is `https://calendar.empresa.com/SOGo/dav/{usuario}/Calendar/personal/`). The user is `LDAP_USER` (`SOGO_USER` only if it is different) |
    | Rocket.Chat messages and status | `ROCKET_CHAT_URL`, `ROCKET_CHAT_APP_ID`, `ROCKET_CHAT_APP_SECRET` |
-   | "Connect VPN" button | `VPN_CONNECT_CMD` |
+   | "Connect VPN" button | `VPN_CONNECT_CMD` (e.g. `sudo openfortivpn gw.empresa.com:443 -u {usuario}`) |
    | 2FA code | `TOTP_SECRET_FILE` (a file with your base32 TOTP secret) + `oathtool` |
 
 3. Run: `./run.sh` — then **right-click the penguin** to see everything it can do. Options you turn on/off in the menu are remembered.

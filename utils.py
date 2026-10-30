@@ -1,6 +1,7 @@
 """Utilidades comunes: .env, log, preferencias guardadas e inactividad del usuario."""
 import os
 import json
+import getpass
 import datetime
 import subprocess
 from pathlib import Path
@@ -8,7 +9,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
+# interpolate=False: que un "$" en una contraseña no se tome como una variable
+load_dotenv(BASE_DIR / ".env", interpolate=False)
 
 SETTINGS_FILE = BASE_DIR / "settings.json"
 
@@ -19,8 +21,19 @@ def log(message: str):
 
 
 def env(name: str, default: str = "") -> str:
-    """Lee una variable del .env quitando comentarios al final de la línea."""
-    return os.getenv(name, default).split("#")[0].strip()
+    """Lee una variable del .env. Los comentarios del final ("valor   # comentario") ya los
+    quita python-dotenv; aquí no se corta en "#" para no romper contraseñas como "abc#123"."""
+    return os.getenv(name, default).strip()
+
+
+def usuario() -> str:
+    """Tu usuario de la empresa (LDAP): LDAP_USER del .env o, si no está, el de este Linux."""
+    return env("LDAP_USER") or getpass.getuser()
+
+
+def con_usuario(texto: str) -> str:
+    """Cambia {usuario} por tu usuario LDAP (en URLs de calendario, comando de la VPN…)."""
+    return texto.replace("{usuario}", usuario())
 
 
 def env_int(name: str, default: int) -> int:

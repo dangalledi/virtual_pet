@@ -10,7 +10,7 @@ import shutil
 import socket
 import subprocess
 
-from utils import env, log
+from utils import con_usuario, env, log
 
 
 def interfaz() -> str:
@@ -88,7 +88,7 @@ def estado_ahora() -> tuple:
 
 def comando_conexion() -> str:
     """Comando para conectar la VPN (VPN_CONNECT_CMD en el .env)."""
-    return env("VPN_CONNECT_CMD")
+    return con_usuario(env("VPN_CONNECT_CMD"))
 
 
 def conexion_en_marcha() -> bool:
