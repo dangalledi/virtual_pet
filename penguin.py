@@ -543,6 +543,8 @@ class PenguinCharacter(QWidget):
                                  "reunión → No molestar · escondido o fuera → Ausente",
                                  "Estado de Rocket.Chat solo a mano"),
             "pausas":           ("🧘 Te recordaré hacer pausas", "Sin recordatorios de pausas"),
+            "postits_siempre":  ("📌 Post-its siempre a la vista",
+                                 "📌 Post-its solo cuando me tocas"),
         }
         si, no = textos[clave]
         log(f"{clave}: {'activado' if activo else 'desactivado'}")
