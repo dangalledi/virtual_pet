@@ -13,7 +13,8 @@ def aplicar_zoom():
     Qt lo lee al crear la aplicación, así que hay que ponerlo antes."""
     from utils import load_settings
     zoom = load_settings().get("zoom")
-    if zoom and zoom != 1:
+    if zoom:
+        # También con 1: al reiniciar tras cambiar el zoom se hereda el valor anterior
         os.environ["QT_SCALE_FACTOR"] = str(zoom)
 
 
