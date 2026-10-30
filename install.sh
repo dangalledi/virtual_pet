@@ -213,8 +213,10 @@ fi
 # 7. (Opcional) Crear acceso directo en el escritorio
 # =============================================================================
 echo ""
-DESKTOP_DIR="$HOME/Desktop"
-[ -d "$HOME/Escritorio" ] && DESKTOP_DIR="$HOME/Escritorio"
+# La carpeta del escritorio según el idioma del sistema (Escritorio, Desktop…)
+DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+[ -d "$DESKTOP_DIR" ] || DESKTOP_DIR="$HOME/Desktop"
+[ -d "$DESKTOP_DIR" ] || DESKTOP_DIR="$HOME/Escritorio"
 
 if [ -d "$DESKTOP_DIR" ]; then
     ask "¿Crear acceso directo en el escritorio? (s/N):"
@@ -231,7 +233,14 @@ Icon=${INSTALL_DIR}/images/penguin_idle_01.png
 Terminal=false
 EOF
         chmod +x "$DESKTOP_DIR/Virtual Pet.desktop"
-        success "Acceso directo creado en el escritorio"
+        # GNOME además pide marcarlo "de confianza"; si no, no deja abrirlo
+        # (es lo mismo que clic derecho → "Permitir ejecutar")
+        if gio set "$DESKTOP_DIR/Virtual Pet.desktop" metadata::trusted true 2>/dev/null; then
+            success "Acceso directo creado en el escritorio"
+        else
+            success "Acceso directo creado en el escritorio"
+            warn "Si no se abre: clic derecho en el icono → \"Permitir ejecutar\""
+        fi
     fi
 fi
 
