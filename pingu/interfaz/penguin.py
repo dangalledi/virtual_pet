@@ -21,7 +21,7 @@ from pingu.interfaz.globo import BubbleLabel
 from pingu.servicios import calendario, dosfa, rocketchat, vpn
 from pingu.servicios.estado_rc import EstadoAuto
 from pingu.utils import (BASE_DIR, NAVEGADORES, activar_ventana, env, env_int, log,
-                         load_settings, save_settings)
+                         load_settings, save_settings, tamano_elegido, zoom_general)
 
 # Tamaño del pingüino en píxeles (el sprite original es de 200)
 PENGUIN_SIZE = env_int("PENGUIN_SIZE", 100)
@@ -134,7 +134,7 @@ class PenguinCharacter(QWidget):
             return None
         # A la resolución real de la pantalla (con zoom), para que no se vea borroso
         dpr = QApplication.instance().devicePixelRatio()
-        lado = round(PENGUIN_SIZE * dpr)
+        lado = round(self._lado_pingu() * dpr)
         pix = pix.scaled(lado, lado, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         pix.setDevicePixelRatio(dpr)
         return pix
@@ -145,23 +145,36 @@ class PenguinCharacter(QWidget):
 
     def mascota_actual(self) -> tuple:
         """(clave, color) de la mascota elegida en el menú; ("pingu", "") por defecto."""
-        ajustes = getattr(self, "settings", None) or load_settings()
-        clave, _, color = ajustes.get("mascota", mascotas.PINGU).partition(":")
+        clave, _, color = self._ajustes().get("mascota", mascotas.PINGU).partition(":")
         if clave != mascotas.PINGU and clave not in mascotas.CATALOGO:
             return mascotas.PINGU, ""
         return clave, color
 
+    def _ajustes(self) -> dict:
+        return getattr(self, "settings", None) or load_settings()
+
+    def _escala(self, clave: str) -> float:
+        """Tamaño elegido (tam_mascota / tam_postits), descontando el zoom general, que
+        ya agranda todo lo de Qt: así en pantalla sale justo el tamaño elegido."""
+        return tamano_elegido(self._ajustes(), clave) / zoom_general()
+
+    def _lado_pingu(self) -> int:
+        return max(20, round(PENGUIN_SIZE * self._escala("tam_mascota")))
+
+    def _alto_mascota(self) -> int:
+        return max(12, round(MASCOTA_SIZE * self._escala("tam_mascota")))
+
     def loadAnimations(self):
         clave, color = self.mascota_actual()
-        cargada = (mascotas.cargar(clave, color, MASCOTA_SIZE,
+        cargada = (mascotas.cargar(clave, color, self._alto_mascota(),
                                    QApplication.instance().devicePixelRatio())
                    if clave != mascotas.PINGU else None)
         self.mascota_cargada = clave if cargada else mascotas.PINGU
         if cargada:
             self.animations, self.margen_arriba, ancho = cargada
-            alto = MASCOTA_SIZE
+            alto = self._alto_mascota()
         else:
-            ancho = alto = PENGUIN_SIZE
+            ancho = alto = self._lado_pingu()
             if clave != mascotas.PINGU:
                 log(f"[MASCOTA] No pude cargar {clave} {color}: vuelvo al pingüino")
             self.animations = {
@@ -173,7 +186,7 @@ class PenguinCharacter(QWidget):
                 "slide":     self._frames("slide", 3),
             }
             # El sprite tiene margen transparente arriba (65 px a tamaño 200)
-            self.margen_arriba = 65 * PENGUIN_SIZE // 200
+            self.margen_arriba = 65 * self._lado_pingu() // 200
         # La ventana se ajusta a la mascota sin moverla: mismo centro y mismo suelo
         if (ancho, alto) != (self.width(), self.height()):
             self.move(self.x() - (ancho - self.width()) // 2, self.y() - (alto - self.height()))
@@ -441,6 +454,24 @@ class PenguinCharacter(QWidget):
         self._config.raise_()
         self._config.activateWindow()
 
+    def cambiar_tamano(self, clave: str, valor: float):
+        """Tamaño de la mascota (tam_mascota) o de los post-its (tam_postits), al momento."""
+        self.settings[clave] = valor
+        save_settings(self.settings)
+        if clave == "tam_mascota":
+            self.loadAnimations()
+            self.setState("idle")
+            self._mantener_en_pantalla()
+        else:
+            self.tablero.poner_escala(self._escala("tam_postits"))
+
+    def _mantener_en_pantalla(self):
+        """Si al crecer se sale por un borde, la mete dentro."""
+        pantalla = QDesktopWidget().availableGeometry(self)
+        x = max(pantalla.left(), min(self.x(), pantalla.right() - self.width()))
+        y = max(pantalla.top(), min(self.y(), pantalla.bottom() - self.height()))
+        self.move(x, y)
+
     def cambiar_zoom(self, zoom: float):
         """Guarda el zoom y reinicia: Qt solo lo lee al arrancar (ver main.aplicar_zoom)."""
         if zoom == self.settings.get("zoom", 1):
@@ -580,6 +611,7 @@ class PenguinCharacter(QWidget):
         self.tablero = postits.Tablero(hecho=self._borrar_nota, editar=self._editar_nota,
                                        avisar=self._avisar_nota_en,
                                        cambiado=lambda: notas.guardar(self.notas))
+        self.tablero.poner_escala(self._escala("tam_postits"))
         self.tablero.sincronizar(self.notas)
         # Post-its a la vista solo mientras alguna ventana de Pingu tiene el foco.
         # Se espera un poco antes de esconderlos: al pasar el foco del pingüino a un

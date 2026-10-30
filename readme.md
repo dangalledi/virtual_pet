@@ -59,7 +59,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 - Rocket.Chat: 🤖 automatic status *(off by default)*
 - Workday: ☀️ intensive schedule today
 - Notes: 📌 post-its always visible
-- Look: 🐾 pet (penguin / cat / chicken / duck) · 🔍 size 100 % … 250 % (with *Apply*: Pingu restarts)
+- Look: 🐾 pet (penguin / cat / chicken / duck) · 🐧 pet size · 📝 post-it size (both change at once) · 🔍 menus, windows and bubbles 100 % … 250 % (with *Apply*: Pingu restarts)
 
 When the penguin is hidden, the top-bar icon has the same menu (plus *Come back now*). Answers to menu options then appear as GNOME notifications and the penguin stays hidden; important alerts (meetings, messages, VPN…) still bring it back.
 
@@ -95,7 +95,10 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 
 ### Pets
 - **🐾 Pet** in ⚙️ Settings swaps the penguin for a **cat** (6 colours), a **chicken** (3 colours) or a **rubber duck**, from [vscode-pets](https://github.com/tonybaloney/vscode-pets). It changes on the spot and is remembered
-- **🔍 Size** in ⚙️ Settings zooms everything at once (pet, bubbles, menus, post-its, dialogs) from 100 % to 250 % — handy on 2K/4K screens. Pingu restarts itself to apply it, and it is remembered (`zoom` in `settings.json`)
+- **Sizes** in ⚙️ Settings — handy on 2K/4K screens, all remembered in `settings.json`:
+  - 🐧 **Pet size** (50 % … 300 %) and 📝 **post-it size** (75 % … 250 %) change on the spot, each on its own
+  - 🔍 **Menus, windows and bubbles** (100 % … 250 %): Pingu restarts itself to apply it. It does not change the pet or the post-its
+  - Until you pick a pet or post-it size, they follow the menus size
 - The animations are read from the vscode-pets extension if you have it installed in VS Code. Without it, the chicken and duck are downloaded from the repo into `mascotas_cache/`; the cat needs the extension (the repo keeps its artwork encrypted because of its licence). `VSCODE_PETS_MEDIA` points to another `media/` folder
 - Their drawings are not copied into this repo. Credits: cat by [seethingswarm](https://seethingswarm.itch.io/catset), rubber duck by [Marc Duiker](https://twitter.com/marcduiker), chicken from the [vscode-pets](https://github.com/tonybaloney/vscode-pets) project
 

@@ -13,19 +13,26 @@ from PyQt5.QtWidgets import (QApplication, QDesktopWidget, QHBoxLayout, QLabel, 
 
 from pingu import notas
 
+# Medidas a tamaño normal; se multiplican por ESCALA (⚙️ Configuración → tamaño de los post-its)
 ANCHO = 190                 # ancho de un post-it nuevo
 ANCHO_MIN, ANCHO_MAX = 120, 600
 ALTO_MAX = 600
 SOMBRA = 4
 ESQUINA = 14                # zona de la esquina para redimensionar
+ESCALA = 1.0                # la pone Tablero.poner_escala
+
+
+def px(n: float) -> int:
+    """Medida a la escala de los post-its."""
+    return max(1, round(n * ESCALA))
 
 
 def _boton(texto: str, ayuda: str, hover: str) -> QPushButton:
     b = QPushButton(texto)
-    b.setFixedSize(20, 20)
+    b.setFixedSize(px(20), px(20))
     b.setCursor(Qt.PointingHandCursor)
     b.setToolTip(ayuda)
-    b.setStyleSheet("QPushButton { border: none; color: #5D4037; font-size: 13px;"
+    b.setStyleSheet(f"QPushButton {{ border: none; color: #5D4037; font-size: {px(13)}px;"
                     " font-weight: bold; background: transparent; }"
                     f"QPushButton:hover {{ color: {hover}; }}")
     return b
@@ -57,9 +64,9 @@ class PostIt(QWidget):
         self.setMouseTracking(True)                      # cursor de redimensionar en la esquina
 
         self.cabecera = QLabel()
-        self.cabecera.setStyleSheet("color: #5D4037; font-size: 11px; font-weight: bold;")
+        self.cabecera.setStyleSheet(f"color: #5D4037; font-size: {px(11)}px; font-weight: bold;")
         copiar = _boton("📋", "Copiar el texto", "#1565C0")
-        copiar.setStyleSheet(copiar.styleSheet() + "QPushButton { font-size: 11px; }")
+        copiar.setStyleSheet(copiar.styleSheet() + f"QPushButton {{ font-size: {px(11)}px; }}")
         copiar.clicked.connect(self._copiar)
         hecho = _boton("✓", "Hecho (borrar)", "#2E7D32")
         hecho.clicked.connect(lambda: self._acc["hecho"](self.nota))
@@ -67,18 +74,18 @@ class PostIt(QWidget):
         self.texto = QLabel()
         self.texto.setWordWrap(True)
         self.texto.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        self.texto.setStyleSheet("color: #212121; font-size: 13px;")
+        self.texto.setStyleSheet(f"color: #212121; font-size: {px(13)}px;")
         self.texto.setAttribute(Qt.WA_TransparentForMouseEvents)   # arrastrar desde el texto
 
         arriba = QHBoxLayout()
         arriba.setContentsMargins(0, 0, 0, 0)
-        arriba.setSpacing(2)
+        arriba.setSpacing(px(2))
         arriba.addWidget(self.cabecera, 1)
         arriba.addWidget(copiar)
         arriba.addWidget(hecho)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 4, 10 + SOMBRA, 10 + SOMBRA)
-        layout.setSpacing(6)
+        layout.setContentsMargins(px(10), px(4), px(10) + SOMBRA, px(10) + SOMBRA)
+        layout.setSpacing(px(6))
         layout.addLayout(arriba)
         layout.addWidget(self.texto, 1)
 
@@ -103,10 +110,10 @@ class PostIt(QWidget):
 
     def _ajustar_tamano(self, ancho=None, alto=None):
         """Ancho/alto pedidos (o los guardados); nunca más bajo de lo que ocupa el texto."""
-        tam = self.nota.get("tam") or [ANCHO, 0]
-        ancho = max(ANCHO_MIN, min(ANCHO_MAX, ancho if ancho is not None else tam[0]))
-        alto = alto if alto is not None else tam[1]
-        alto = max(self._alto_minimo(ancho), min(ALTO_MAX, alto))
+        tam = self.nota.get("tam") or [ANCHO, 0]   # guardado a tamaño normal
+        ancho = max(px(ANCHO_MIN), min(px(ANCHO_MAX), ancho if ancho is not None else px(tam[0])))
+        alto = alto if alto is not None else px(tam[1])
+        alto = max(self._alto_minimo(ancho), min(px(ALTO_MAX), alto))
         self.resize(ancho, alto)
 
     def _colocar(self):
@@ -149,8 +156,8 @@ class PostIt(QWidget):
             p.drawLine(QPointF(r.right() - d, r.bottom() - 2), QPointF(r.right() - 2, r.bottom() - d))
 
     def _en_esquina(self, pos) -> bool:
-        return (pos.x() >= self.width() - SOMBRA - ESQUINA
-                and pos.y() >= self.height() - SOMBRA - ESQUINA)
+        return (pos.x() >= self.width() - SOMBRA - px(ESQUINA)
+                and pos.y() >= self.height() - SOMBRA - px(ESQUINA))
 
     # --- Ratón: arrastrar, redimensionar, doble clic, menú ---
     def mousePressEvent(self, event):
@@ -175,7 +182,7 @@ class PostIt(QWidget):
     def mouseReleaseEvent(self, event):
         if self._redim is not None:
             self._redim = None
-            self.nota["tam"] = [self.width(), self.height()]
+            self.nota["tam"] = [round(self.width() / ESCALA), round(self.height() / ESCALA)]
             self._acc["cambiado"]()
         elif self._arrastre is not None:
             self._arrastre = None
@@ -227,7 +234,17 @@ class Tablero:
     def __init__(self, **acciones):
         self._acciones = acciones
         self._postits = {}   # id de la nota -> PostIt
+        self._lista = []
         self.a_la_vista = False
+
+    def poner_escala(self, escala: float):
+        """Cambia el tamaño de todos los post-its (se vuelven a crear con la escala nueva)."""
+        global ESCALA
+        if abs(escala - ESCALA) < 0.001:
+            return
+        ESCALA = escala
+        self.cerrar_todos()
+        self.sincronizar(self._lista)
 
     def mostrar(self, si: bool):
         if si == self.a_la_vista:
@@ -237,6 +254,7 @@ class Tablero:
             postit.setVisible(si)
 
     def sincronizar(self, lista: list):
+        self._lista = lista
         vivas = {n["id"]: n for n in lista}
         for nid in list(self._postits):
             if nid not in vivas:

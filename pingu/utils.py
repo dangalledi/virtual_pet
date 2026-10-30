@@ -45,6 +45,21 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
+def zoom_general() -> float:
+    """Zoom general aplicado al arrancar (menús, ventanas, globos). La mascota y los
+    post-its tienen su propio tamaño y lo compensan para no agrandarse dos veces."""
+    try:
+        return float(os.environ.get("QT_SCALE_FACTOR") or 1)
+    except ValueError:
+        return 1.0
+
+
+def tamano_elegido(settings: dict, clave: str) -> float:
+    """Tamaño elegido para la mascota o los post-its (1 = normal). Si no se ha elegido
+    nunca, el del zoom general, para que no cambien de golpe."""
+    return settings.get(clave) or settings.get("zoom") or 1
+
+
 def load_settings() -> dict:
     """Preferencias que se cambian desde el menú y se recuerdan entre reinicios."""
     try:

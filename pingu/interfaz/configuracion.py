@@ -8,8 +8,11 @@ from PyQt5.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QF
 
 from pingu.servicios import calendario
 from pingu.interfaz import mascotas
+from pingu.utils import tamano_elegido
 
-ZOOMS = [1, 1.25, 1.5, 1.75, 2, 2.5]   # opciones de tamaño (zoom de todo)
+ZOOMS = [1, 1.25, 1.5, 1.75, 2, 2.5]   # zoom general: menús, ventanas y globos
+TAMANOS_MASCOTA = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3]
+TAMANOS_POSTITS = [0.75, 1, 1.25, 1.5, 1.75, 2, 2.5]
 
 
 class VentanaConfig(QDialog):
@@ -61,9 +64,11 @@ class VentanaConfig(QDialog):
         # --- Apariencia ---
         forma = QFormLayout()
         forma.addRow("🐾 Mascota:", self._combo_mascota())
-        forma.addRow("🔍 Tamaño:", self._fila_zoom())
-        aviso = QLabel("El tamaño agranda todo (mascota, globos, menús, post-its). "
-                       "Pingu se reinicia para aplicarlo.")
+        forma.addRow("🐧 Tamaño de la mascota:", self._combo_tamano("tam_mascota", TAMANOS_MASCOTA))
+        forma.addRow("📝 Tamaño de los post-its:", self._combo_tamano("tam_postits", TAMANOS_POSTITS))
+        forma.addRow("🔍 Menús, ventanas y globos:", self._fila_zoom())
+        aviso = QLabel("La mascota y los post-its cambian al momento. "
+                       "Para menús, ventanas y globos Pingu se reinicia.")
         aviso.setWordWrap(True)
         aviso.setStyleSheet("color: gray; font-size: 11px;")
         forma.addRow(aviso)
@@ -102,6 +107,18 @@ class VentanaConfig(QDialog):
             if (clave, color) == actual:
                 combo.setCurrentIndex(i)
         combo.currentIndexChanged.connect(lambda i: self.pingu.cambiar_mascota(*opciones[i]))
+        return combo
+
+    def _combo_tamano(self, clave: str, opciones: list) -> QComboBox:
+        combo = QComboBox()
+        actual = tamano_elegido(self.pingu.settings, clave)
+        if actual not in opciones:   # p. ej. un zoom general que no está en la lista
+            opciones = sorted(opciones + [actual])
+        for valor in opciones:
+            combo.addItem(f"{round(valor * 100)} %" + (" (normal)" if valor == 1 else ""), valor)
+        combo.setCurrentIndex(opciones.index(actual))
+        combo.currentIndexChanged.connect(
+            lambda _: self.pingu.cambiar_tamano(clave, combo.currentData()))
         return combo
 
     def _fila_zoom(self) -> QHBoxLayout:
