@@ -12,7 +12,7 @@ from PyQt5.QtCore import Qt, QTime
 from PyQt5.QtWidgets import (QButtonGroup, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout,
                              QLabel, QPlainTextEdit, QPushButton, QTimeEdit, QVBoxLayout)
 
-from utils import BASE_DIR, log
+from pingu.utils import BASE_DIR, log
 
 NOTAS_FILE = BASE_DIR / "notas.json"
 

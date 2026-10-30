@@ -6,10 +6,10 @@ import threading
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
-import calendario
-import vpn
-from utils import env, env_int, log, hm, idle_seconds
-from woffu import WoffuClient
+from pingu.servicios import calendario
+from pingu.servicios import vpn
+from pingu.utils import env, env_int, log, hm, idle_seconds
+from pingu.servicios.woffu import WoffuClient
 
 
 class AsistenteWorker(QThread):

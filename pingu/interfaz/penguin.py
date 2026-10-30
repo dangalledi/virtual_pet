@@ -14,20 +14,14 @@ from PyQt5.QtWidgets import (QWidget, QLabel, QMenu, QDesktopWidget, QApplicatio
 from PyQt5.QtGui import QPixmap, QTransform, QIcon, QImage, QPainter, QRegion, QBitmap
 from PyQt5.QtCore import Qt, QTimer, QPoint, pyqtSignal
 
-from utils import (BASE_DIR, NAVEGADORES, activar_ventana, env, env_int, log,
-                   load_settings, save_settings)
-import calendario
-import dosfa
-import rocketchat
-import chistes
-import configuracion
-import mascotas
-import notas
-import postits
-import vpn
-from asistente import AsistenteWorker
-from estado_rc import EstadoAuto
-from globo import BubbleLabel
+from pingu import chistes, notas
+from pingu.asistente import AsistenteWorker
+from pingu.interfaz import configuracion, mascotas, postits
+from pingu.interfaz.globo import BubbleLabel
+from pingu.servicios import calendario, dosfa, rocketchat, vpn
+from pingu.servicios.estado_rc import EstadoAuto
+from pingu.utils import (BASE_DIR, NAVEGADORES, activar_ventana, env, env_int, log,
+                         load_settings, save_settings)
 
 # Tamaño del pingüino en píxeles (el sprite original es de 200)
 PENGUIN_SIZE = env_int("PENGUIN_SIZE", 100)

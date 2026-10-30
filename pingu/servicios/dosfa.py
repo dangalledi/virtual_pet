@@ -11,7 +11,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from utils import env, log
+from pingu.utils import env, log
 
 PERIODO = 30   # segundos que dura cada código TOTP
 _BASE32 = re.compile(r"^[A-Z2-7]{16,}=*$")

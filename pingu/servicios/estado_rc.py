@@ -11,7 +11,7 @@ no lo toca hasta que vuelvas a ponerte Disponible.
 """
 import threading
 
-from utils import log
+from pingu.utils import log
 
 
 class EstadoAuto:

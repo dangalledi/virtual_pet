@@ -10,7 +10,7 @@ import shutil
 import socket
 import subprocess
 
-from utils import con_usuario, env, log
+from pingu.utils import con_usuario, env, log
 
 
 def interfaz() -> str:

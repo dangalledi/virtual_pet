@@ -8,7 +8,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent
+# Raíz del proyecto (aquí están .env, notas.json, settings.json, images/…)
+BASE_DIR = Path(__file__).resolve().parent.parent
 # interpolate=False: que un "$" en una contraseña no se tome como una variable
 load_dotenv(BASE_DIR / ".env", interpolate=False)
 

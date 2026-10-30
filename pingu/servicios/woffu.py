@@ -4,7 +4,7 @@ import threading
 
 import requests
 
-from utils import env, log, hm
+from pingu.utils import env, log, hm
 
 
 class WoffuClient:

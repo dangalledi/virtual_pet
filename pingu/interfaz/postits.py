@@ -11,7 +11,7 @@ from PyQt5.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PyQt5.QtWidgets import (QApplication, QDesktopWidget, QHBoxLayout, QLabel, QMenu,
                              QPushButton, QVBoxLayout, QWidget)
 
-import notas
+from pingu import notas
 
 ANCHO = 190                 # ancho de un post-it nuevo
 ANCHO_MIN, ANCHO_MAX = 120, 600

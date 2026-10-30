@@ -14,7 +14,7 @@ import requests
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QBitmap, QImage, QMovie, QPainter, QPixmap, QRegion
 
-from utils import BASE_DIR, env, log
+from pingu.utils import BASE_DIR, env, log
 
 PINGU = "pingu"
 

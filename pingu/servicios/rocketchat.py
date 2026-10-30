@@ -7,7 +7,7 @@ import threading
 import requests
 from PyQt5.QtCore import QThread, pyqtSignal
 
-from utils import env, log
+from pingu.utils import env, log
 
 # Estados de Rocket.Chat → (emoji, nombre)
 ESTADOS = {

@@ -148,24 +148,32 @@ cp .env.example .env   # and fill it in
 
 ## Code layout
 
-| File | What it does |
-|------|--------------|
-| `main.py` | Starts the app (one instance only) |
-| `penguin.py` | The penguin: animations, mouse/keyboard, right-click menu, bubbles, alert queue, tray |
-| `globo.py` | Comic-style speech bubble |
-| `asistente.py` | Background thread, once a minute: VPN, meetings, Woffu, daily summary, breaks |
-| `woffu.py` | Woffu client: login, clock-ins, hours, clock in/out |
-| `calendario.py` | SOGo meetings (CalDAV) and team absences (Woffu iCal) |
-| `rocketchat.py` | Rocket.Chat client and message/mention watcher |
-| `estado_rc.py` | Automatic Rocket.Chat status rules |
-| `vpn.py` | VPN check and "Connect VPN" terminal |
-| `notas.py` | Notes and reminders: storage and the "new note" dialog |
-| `mascotas.py` | Other pets (vscode-pets animations) |
-| `postits.py` | On-screen post-its for the notes |
-| `configuracion.py` | ⚙️ Settings window (alerts, workday, post-its, pet, size) |
-| `chistes.py` | The penguin's joke collection (no repeats until it has told them all) |
-| `dosfa.py` | 2FA (TOTP) code with `oathtool` |
-| `utils.py` | `.env`, logging, saved settings, idle time |
+```
+virtual_pet/
+├── main.py                 starts the app (one instance only)
+├── run.sh · install.sh     launcher and installer
+├── images/                 penguin sprites
+└── pingu/
+    ├── asistente.py        background thread, once a minute: VPN, meetings, Woffu, daily summary, breaks
+    ├── notas.py            notes and reminders: storage and the "new note" dialog
+    ├── chistes.py          joke collection (no repeats until it has told them all)
+    ├── utils.py            .env, logging, saved settings, idle time
+    ├── interfaz/           what you see
+    │   ├── penguin.py      the penguin: animations, mouse/keyboard, menu, bubbles, alert queue, tray
+    │   ├── globo.py        comic-style speech bubble
+    │   ├── postits.py      on-screen post-its
+    │   ├── configuracion.py  ⚙️ settings window
+    │   └── mascotas.py     other pets (vscode-pets animations)
+    └── servicios/          talking to the outside
+        ├── woffu.py        Woffu: login, clock-ins, hours, clock in/out
+        ├── calendario.py   SOGo meetings (CalDAV) and team absences (Woffu iCal)
+        ├── rocketchat.py   Rocket.Chat client and message/mention watcher
+        ├── estado_rc.py    automatic Rocket.Chat status rules
+        ├── vpn.py          VPN check and "Connect VPN" terminal
+        └── dosfa.py        2FA (TOTP) code with oathtool
+```
+
+Your own data stays in the project root and is not in git: `.env`, `notas.json`, `settings.json`, `mascotas_cache/`, `pingu.log`.
 
 ## License
 

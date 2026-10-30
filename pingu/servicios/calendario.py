@@ -12,7 +12,7 @@ import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from icalendar import Calendar
 
-from utils import con_usuario, env, log, usuario
+from pingu.utils import con_usuario, env, log, usuario
 
 SOGO_CACHE_TTL = 600    # segundos de validez de la copia del calendario de hoy
 ICAL_CACHE_TTL = 600

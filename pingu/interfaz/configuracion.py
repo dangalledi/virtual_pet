@@ -6,8 +6,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
                              QGroupBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout)
 
-import calendario
-import mascotas
+from pingu.servicios import calendario
+from pingu.interfaz import mascotas
 
 ZOOMS = [1, 1.25, 1.5, 1.75, 2, 2.5]   # opciones de tamaño (zoom de todo)
 
