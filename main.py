@@ -42,4 +42,7 @@ if __name__ == "__main__":
     penguin.show()
     penguin.setFocus()
     penguin.setupAutoMoveTimer()
-    sys.exit(app.exec_())
+    codigo = app.exec_()
+    # Salida directa: si un hilo sigue esperando a la red, que Qt no aborte al destruirlo
+    sys.stdout.flush()
+    os._exit(codigo)

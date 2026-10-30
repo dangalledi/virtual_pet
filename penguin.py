@@ -356,7 +356,17 @@ class PenguinCharacter(QWidget):
 
     def closeEvent(self, event):
         log("Cerrando el programa")
+        self._parar_hilos()
         QApplication.instance().quit()
+
+    def _parar_hilos(self):
+        """Para los hilos de fondo antes de salir: si Qt los encuentra en marcha al
+        cerrar, aborta el programa ("QThread: Destroyed while thread is still running")."""
+        hilos = [getattr(self, "asistente", None), getattr(self, "rc_worker", None)]
+        for hilo in filter(None, hilos):
+            hilo.stop()
+        for hilo in filter(None, hilos):
+            hilo.wait(3000)   # si está a mitad de una consulta, main.py sale igualmente
 
     # =======================================================================
     # Menú (click derecho)
