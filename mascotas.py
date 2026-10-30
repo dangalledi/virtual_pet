@@ -101,8 +101,9 @@ def _leer_gif(ruta) -> list:
     return frames
 
 
-def cargar(clave: str, color: str, tam: int):
-    """Animaciones de una mascota de tam px de alto (más ancha si el dibujo lo pide).
+def cargar(clave: str, color: str, tam: int, dpr: float = 1.0):
+    """Animaciones de una mascota de tam px de alto (más ancha si el dibujo lo pide), dibujadas
+    a la resolución real de la pantalla (dpr: zoom / pantalla HiDPI).
     Devuelve ({estado: [QPixmap]}, margen_arriba, ancho) o None si falta algo.
 
     Las animaciones tienen lienzos de distinto tamaño: se apoyan todas abajo y
@@ -144,19 +145,23 @@ def cargar(clave: str, color: str, tam: int):
         return None
 
     # Se escala por la altura: así una animación muy alargada (correr) no encoge a la mascota
+    # Se dibuja a la resolución real de la pantalla (dpr = zoom) para que no se vea borroso
     escala = tam / caja.height()
-    modo = Qt.SmoothTransformation if escala < 1 else Qt.FastTransformation   # pixel art nítido
-    w, h = round(caja.width() * escala), tam
+    modo = Qt.SmoothTransformation if escala * dpr < 1 else Qt.FastTransformation   # pixel art nítido
+    w = round(caja.width() * escala)
     total = max(tam, w)
     x0 = (total - w) // 2
 
     def a_tamano(img: QImage) -> QPixmap:
-        final = QImage(total, tam, QImage.Format_ARGB32)
+        final = QImage(round(total * dpr), round(tam * dpr), QImage.Format_ARGB32)
         final.fill(Qt.transparent)
         p = QPainter(final)
-        p.drawImage(x0, 0, img.copy(caja).scaled(w, h, Qt.IgnoreAspectRatio, modo))
+        p.drawImage(round(x0 * dpr), 0, img.copy(caja).scaled(round(w * dpr), round(tam * dpr),
+                                                              Qt.IgnoreAspectRatio, modo))
         p.end()
-        return QPixmap.fromImage(final)
+        pix = QPixmap.fromImage(final)
+        pix.setDevicePixelRatio(dpr)
+        return pix
 
     listos = {a: [a_tamano(f) for f in fs] for a, fs in apoyados.items()}
     animaciones = {estado: listos[anim] for estado, anim in ANIMACIONES.items()}
@@ -164,7 +169,8 @@ def cargar(clave: str, color: str, tam: int):
 
     # Dónde empieza la cabeza en reposo: ahí apunta el piquito del globo
     arriba = min(QRegion(QBitmap.fromImage(p.toImage().createAlphaMask())).boundingRect().top()
-                 for p in animaciones["idle"])
+                 for p in animaciones["idle"]) / dpr
+    arriba = round(arriba)
     return animaciones, arriba, total
 
 

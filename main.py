@@ -1,3 +1,4 @@
+import os
 import sys
 import fcntl
 from pathlib import Path
@@ -5,6 +6,15 @@ from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 
 LOCK_FILE = Path(__file__).resolve().parent / ".pingu.lock"
+
+
+def aplicar_zoom():
+    """Zoom de todo (mascota, globos, menús, post-its…) elegido en el menú 🔍 Tamaño.
+    Qt lo lee al crear la aplicación, así que hay que ponerlo antes."""
+    from utils import load_settings
+    zoom = load_settings().get("zoom")
+    if zoom and zoom != 1:
+        os.environ["QT_SCALE_FACTOR"] = str(zoom)
 
 
 def ya_abierto() -> bool:
@@ -23,6 +33,7 @@ if __name__ == "__main__":
         print("El pingüino ya está abierto.")
         sys.exit(0)
 
+    aplicar_zoom()
     from penguin import PenguinCharacter
     app = QApplication(sys.argv)
     # Al esconderse en la barra no hay ventanas visibles: que no se cierre la app

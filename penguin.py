@@ -1,6 +1,8 @@
 """El pingüino: animaciones, ratón, teclado, menú, globos y bandeja del sistema.
 La lógica de trabajo (Woffu, VPN, calendario, Rocket.Chat) está en otros módulos."""
 import math
+import os
+import sys
 import random
 import datetime
 import threading
@@ -31,6 +33,8 @@ PENGUIN_SIZE = env_int("PENGUIN_SIZE", 100)
 # Alto de las otras mascotas (gato, pollo, pato): su dibujo ocupa todo el alto y el del
 # pingüino no (su PNG tiene mucho margen), así que con un 60 % quedan de un tamaño parecido
 MASCOTA_SIZE = env_int("MASCOTA_SIZE", PENGUIN_SIZE * 60 // 100)
+# Zoom de todo (mascota, globos, menús, post-its): opciones del menú 🔍 Tamaño
+ZOOMS = [1, 1.25, 1.5, 1.75, 2, 2.5]
 # Minutos que el pingüino se esconde en la barra con doble click
 HIDE_MINUTES = env_int("HIDE_MINUTES", 30)
 IMAGES_DIR = BASE_DIR / "images"
@@ -134,7 +138,12 @@ class PenguinCharacter(QWidget):
         if pix.isNull():
             log(f"Error al cargar {name}")
             return None
-        return pix.scaled(PENGUIN_SIZE, PENGUIN_SIZE, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        # A la resolución real de la pantalla (con zoom), para que no se vea borroso
+        dpr = QApplication.instance().devicePixelRatio()
+        lado = round(PENGUIN_SIZE * dpr)
+        pix = pix.scaled(lado, lado, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        pix.setDevicePixelRatio(dpr)
+        return pix
 
     def _frames(self, prefix: str, count: int) -> list:
         frames = [self.loadImage(f"penguin_{prefix}_{i:02d}.png") for i in range(1, count + 1)]
@@ -150,7 +159,9 @@ class PenguinCharacter(QWidget):
 
     def loadAnimations(self):
         clave, color = self.mascota_actual()
-        cargada = mascotas.cargar(clave, color, MASCOTA_SIZE) if clave != mascotas.PINGU else None
+        cargada = (mascotas.cargar(clave, color, MASCOTA_SIZE,
+                                   QApplication.instance().devicePixelRatio())
+                   if clave != mascotas.PINGU else None)
         self.mascota_cargada = clave if cargada else mascotas.PINGU
         if cargada:
             self.animations, self.margen_arriba, ancho = cargada
@@ -417,6 +428,7 @@ class PenguinCharacter(QWidget):
         # --- Notas y recordatorios ---
         menu.addSeparator()
         self._menu_mascota(menu.addMenu("🐾 Mascota"), item)
+        self._menu_zoom(menu.addMenu("🔍 Tamaño"), item)
         self._menu_notas(menu.addMenu("📝 Notas y recordatorios"), item)
 
         # --- Bienestar y otros ---
@@ -455,6 +467,30 @@ class PenguinCharacter(QWidget):
             if not ok:
                 act.setToolTip("Instala la extensión vscode-pets en VS Code")
                 act.setText(texto + " (instala vscode-pets)")
+
+    def _menu_zoom(self, sub: QMenu, item):
+        actual = self.settings.get("zoom", 1)
+        for zoom in ZOOMS:
+            texto = f"{round(zoom * 100)} %" + (" (normal)" if zoom == 1 else "")
+            item(texto, lambda z=zoom: self.cambiar_zoom(z), checked=zoom == actual, parent=sub)
+
+    def cambiar_zoom(self, zoom: float):
+        """Guarda el zoom y reinicia: Qt solo lo lee al arrancar (ver main.aplicar_zoom)."""
+        if zoom == self.settings.get("zoom", 1):
+            return
+        self.settings["zoom"] = zoom
+        save_settings(self.settings)
+        log(f"Zoom {zoom}: reiniciando")
+        self.show_bubble(f"🔍 Me pongo al {round(zoom * 100)} %…", duration_ms=1500,
+                         theme=BubbleLabel.THEME_OK)
+        QTimer.singleShot(1200, self._reiniciar)
+
+    def _reiniciar(self):
+        """Vuelve a arrancar el programa en el mismo proceso (el candado se suelta solo)."""
+        if self.tray:
+            self.tray.hide()
+        self.tablero.cerrar_todos()
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
     def cambiar_mascota(self, clave: str, color: str):
         anterior = self.settings.get("mascota", mascotas.PINGU)
@@ -751,6 +787,7 @@ class PenguinCharacter(QWidget):
         cuadrado, para que la mascota ocupe todo el hueco del icono."""
         if img.isNull():
             return QIcon()
+        img.setDevicePixelRatio(1)   # con zoom el sprite viene a más resolución: se usa tal cual
         box = QRegion(QBitmap.fromImage(img.createAlphaMask())).boundingRect()
         if box.isEmpty():
             return QIcon(QPixmap.fromImage(img))

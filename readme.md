@@ -52,6 +52,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 - 📅 Today's meetings · 🔔 Meeting reminders *(on/off)*
 - 💬 Message and mention alerts *(on/off)* · 🤖 Automatic Rocket.Chat status *(on/off, off by default)* · 🟢 Change Rocket.Chat status
 - 🐾 Pet ▸ penguin / cat / chicken / duck
+- 🔍 Size ▸ 100 % … 250 %
 - 📝 Notes and reminders ▸ remind me… / new note… / your notes (view, remind me in…, done)
 - 🔐 Copy 2FA code · 🧘 Break reminders *(on/off)* · 🔌 Connect VPN · 📶 Check VPN · 😂 Joke · 🙈 Hide · Close
 
@@ -89,6 +90,7 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 
 ### Pets
 - **🐾 Pet** in the menu swaps the penguin for a **cat** (6 colours), a **chicken** (3 colours) or a **rubber duck**, from [vscode-pets](https://github.com/tonybaloney/vscode-pets). It changes on the spot and is remembered
+- **🔍 Size** in the menu zooms everything at once (pet, bubbles, menus, post-its, dialogs) from 100 % to 250 % — handy on 2K/4K screens. Pingu restarts itself to apply it, and it is remembered (`zoom` in `settings.json`)
 - The animations are read from the vscode-pets extension if you have it installed in VS Code. Without it, the chicken and duck are downloaded from the repo into `mascotas_cache/`; the cat needs the extension (the repo keeps its artwork encrypted because of its licence). `VSCODE_PETS_MEDIA` points to another `media/` folder
 - Their drawings are not copied into this repo. Credits: cat by [seethingswarm](https://seethingswarm.itch.io/catset), rubber duck by [Marc Duiker](https://twitter.com/marcduiker), chicken from the [vscode-pets](https://github.com/tonybaloney/vscode-pets) project
 
