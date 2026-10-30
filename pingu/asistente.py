@@ -73,6 +73,10 @@ class AsistenteWorker(QThread):
         self._despertar.set()   # sale de la espera al momento
         self.quit()
 
+    def refrescar(self):
+        """Da una vuelta ya (p. ej. tras cambiar la jornada), sin esperar al minuto."""
+        self._despertar.set()
+
     # ------------------------------------------------------------------
     # Bucle principal
     # ------------------------------------------------------------------
@@ -105,6 +109,7 @@ class AsistenteWorker(QThread):
             # Una vuelta por minuto (suficiente para todos los avisos); sin
             # despertar cada segundo para ahorrar batería
             self._despertar.wait(60)
+            self._despertar.clear()
 
     def _nuevo_dia(self, day):
         self._day = day

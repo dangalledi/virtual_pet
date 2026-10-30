@@ -576,6 +576,13 @@ class PenguinCharacter(QWidget):
         w = self.asistente.woffu
         activa = w.intensiva_date != datetime.date.today()
         w.intensiva_date = datetime.date.today() if activa else None
+        # Se guarda para que un reinicio de Pingu no la quite (vale solo para hoy)
+        if activa:
+            self.settings["intensiva"] = datetime.date.today().isoformat()
+        else:
+            self.settings.pop("intensiva", None)
+        save_settings(self.settings)
+        self.asistente.refrescar()   # el estado de Woffu, recalculado ya
         self.show_bubble("☀️ Hoy jornada intensiva" if activa else "Jornada normal hoy",
                          duration_ms=3000)
 
@@ -850,6 +857,8 @@ class PenguinCharacter(QWidget):
     def _start_asistente(self):
         self.asistente = AsistenteWorker(self)
         self.asistente.resumen_date = self.settings.get("resumen_date")
+        if self.settings.get("intensiva") == datetime.date.today().isoformat():
+            self.asistente.woffu.intensiva_date = datetime.date.today()   # puesta hoy antes de reiniciar
         self.asistente.aviso.connect(self._on_aviso)
         self.asistente.horas_actualizadas.connect(self._on_horas_actualizadas)
         self.asistente.vpn_changed.connect(self._on_vpn_changed)

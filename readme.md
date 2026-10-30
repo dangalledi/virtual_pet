@@ -67,7 +67,7 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 
 ### Woffu
 - Checks your clock-ins every minute; the menu shows hours worked, time left and estimated leave time
-- 🎉 Jumps when you complete your hours (7h, or 6h 30min in the summer intensive schedule, 21-Jun → 15-Sep; outside those dates turn it on for today in ⚙️ Settings)
+- 🎉 Jumps when you complete your hours (7h, or 6h 30min in the summer intensive schedule, 21-Jun → 15-Sep; outside those dates turn it on for today in ⚙️ Settings; it survives restarts until the end of the day)
 - ⏰ Reminders on weekdays if you haven't clocked in by 10:00, or you're still clocked in at 18:30
 - 🚽 Warns you 10 min before lunch; after clocking out it offers a 30-min "you can come back" reminder
 - Clocking in/out from the menu always asks for confirmation
