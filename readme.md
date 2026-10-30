@@ -84,7 +84,7 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 - **⏰ Remind me…**: type what (e.g. *call Marta*) and when: in 5/15/30 min, 1/2 hours, or at a given time (if that time has passed, tomorrow). When it goes off it disappears
 - **📝 New note…**: a sticky note that stays in the list until you mark it **✅ Done**. It can have a reminder too; after it goes off, the note stays
 - Each note in the menu has its own submenu: view it, remind me in 15/30/60 min, remove the reminder, done
-- **Post-its on screen**: every note shows as a little yellow window (orange if it has a reminder, with its time). They only show while Pingu has the focus (click the penguin to see them; click another window and they hide). Drag them anywhere — they remember where you left them. **✓** = done. *Post-its always visible* in the submenu keeps them on screen all the time
+- **Post-its on screen**: every note shows as a little yellow window (orange if it has a reminder, with its time). They only show while Pingu has the focus (click the penguin to see them; click another window and they hide). Drag them anywhere and resize them from the bottom-right corner — they remember where and how big you left them. **Double-click** to edit, **right-click** to change the color, copy the text, set a reminder or reset the size. **📋** = copy the text, **✓** = done. When writing a note, Enter adds a new line and Ctrl+Enter saves. *Post-its always visible* in the submenu keeps them on screen all the time
 - Saved in `notas.json`, so they survive restarts; reminders missed while Pingu was closed show up when it starts
 
 ### Pets

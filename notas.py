@@ -9,8 +9,8 @@ import json
 import time
 
 from PyQt5.QtCore import Qt, QTime
-from PyQt5.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
-                             QLineEdit, QTimeEdit, QVBoxLayout)
+from PyQt5.QtWidgets import (QButtonGroup, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout,
+                             QLabel, QPlainTextEdit, QPushButton, QTimeEdit, QVBoxLayout)
 
 from utils import BASE_DIR, log
 
@@ -20,6 +20,23 @@ NOTAS_FILE = BASE_DIR / "notas.json"
 CUANDO = [("Sin aviso", None), ("En 5 min", 5), ("En 15 min", 15), ("En 30 min", 30),
           ("En 1 hora", 60), ("En 2 horas", 120), ("A las…", -1)]
 POSPONER = [("En 15 min", 15), ("En 30 min", 30), ("En 1 hora", 60)]
+
+# Colores de los post-its: clave -> (nombre, papel, franja de arriba)
+COLORES = {
+    "amarillo": ("Amarillo", "#FFF59D", "#FBC02D"),
+    "naranja":  ("Naranja",  "#FFCC80", "#F57C00"),
+    "rosa":     ("Rosa",     "#F8BBD0", "#EC407A"),
+    "verde":    ("Verde",    "#C5E1A5", "#7CB342"),
+    "azul":     ("Azul",     "#B3E5FC", "#039BE5"),
+    "lila":     ("Lila",     "#D1C4E9", "#7E57C2"),
+}
+
+
+def color_de(nota: dict) -> str:
+    """El color elegido; si no hay, naranja si tiene aviso y amarillo si no."""
+    if nota.get("color") in COLORES:
+        return nota["color"]
+    return "naranja" if nota.get("aviso") else "amarillo"
 
 
 # ---------------------------------------------------------------------------
@@ -40,10 +57,12 @@ def guardar(notas: list):
         log(f"No se pudo guardar {NOTAS_FILE.name}: {e}")
 
 
-def nueva(notas: list, texto: str, aviso, fija: bool) -> dict:
+def nueva(notas: list, texto: str, aviso, fija: bool, color=None) -> dict:
     """Añade una nota (fija=True) o un recordatorio (fija=False). aviso: datetime o None."""
     nota = {"id": int(time.time() * 1000), "texto": texto.strip(), "fija": fija,
             "aviso": aviso.isoformat(timespec="minutes") if aviso else None}
+    if color:
+        nota["color"] = color
     notas.append(nota)
     guardar(notas)
     log(f"[NOTAS] {'Nota' if fija else 'Recordatorio'}: {nota['texto']!r} aviso={nota['aviso']}")
@@ -130,15 +149,66 @@ def texto_lista(notas: list) -> str:
 # ---------------------------------------------------------------------------
 # Diálogo para escribir una nota / recordatorio
 # ---------------------------------------------------------------------------
-class DialogoNota(QDialog):
-    def __init__(self, recordatorio: bool, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("⏰ Recuérdame" if recordatorio else "📝 Nueva nota")
-        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
-        self.setMinimumWidth(360)
+class _Texto(QPlainTextEdit):
+    """Caja de texto: Enter = salto de línea, Ctrl+Enter = guardar."""
 
-        self.texto = QLineEdit()
+    def __init__(self, al_guardar):
+        super().__init__()
+        self._al_guardar = al_guardar
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter) and event.modifiers() & Qt.ControlModifier:
+            self._al_guardar()
+            return
+        super().keyPressEvent(event)
+
+
+class DialogoNota(QDialog):
+    """Nueva nota / recordatorio, o editar una que ya existe (nota=...)."""
+
+    def __init__(self, recordatorio: bool, parent=None, nota: dict = None):
+        super().__init__(parent)
+        editando = nota is not None
+        if editando:
+            self.setWindowTitle("✏️ Editar nota")
+        else:
+            self.setWindowTitle("⏰ Recuérdame" if recordatorio else "📝 Nueva nota")
+        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        self.setMinimumWidth(380)
+
+        botones = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        ok = botones.button(QDialogButtonBox.Ok)
+
+        def guardar():
+            if ok.isEnabled():
+                self.accept()
+
+        self.texto = _Texto(guardar)
         self.texto.setPlaceholderText("Llamar a Marta" if recordatorio else "Revisar el backup del nodo 3")
+        self.texto.setTabChangesFocus(True)
+        self.texto.setFixedHeight(110)
+
+        # Colores: una fila de cuadraditos
+        self._grupo_color = QButtonGroup(self)
+        fila_color = QHBoxLayout()
+        fila_color.addWidget(QLabel("Color:"))
+        actual = color_de(nota) if editando else ("naranja" if recordatorio else "amarillo")
+        # Si no eliges otro, no se guarda color y sigue el automático (naranja con aviso)
+        self._automatico = None if (editando and nota.get("color")) else actual
+        for clave, (nombre, papel, franja) in COLORES.items():
+            b = QPushButton()
+            b.setCheckable(True)
+            b.setFixedSize(24, 24)
+            b.setToolTip(nombre)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setStyleSheet(f"QPushButton {{ background: {papel}; border: 1px solid {franja};"
+                            f" border-radius: 4px; }}"
+                            f"QPushButton:checked {{ border: 3px solid #424242; }}")
+            b.setProperty("color", clave)
+            b.setChecked(clave == actual)
+            self._grupo_color.addButton(b)
+            fila_color.addWidget(b)
+        fila_color.addStretch(1)
 
         self.cuando = QComboBox()
         self._opciones = CUANDO[1:] if recordatorio else CUANDO
@@ -158,17 +228,36 @@ class DialogoNota(QDialog):
         fila.addWidget(self.cuando, 1)
         fila.addWidget(self.hora)
 
-        botones = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         botones.accepted.connect(self.accept)
         botones.rejected.connect(self.reject)
         self.texto.textChanged.connect(
-            lambda t: botones.button(QDialogButtonBox.Ok).setEnabled(bool(t.strip())))
-        botones.button(QDialogButtonBox.Ok).setEnabled(False)
+            lambda: ok.setEnabled(bool(self.texto.toPlainText().strip())))
+        ok.setEnabled(False)
+
+        pista = QLabel("Enter = nueva línea · Ctrl+Enter = guardar")
+        pista.setStyleSheet("color: gray; font-size: 11px;")
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.texto)
-        layout.addLayout(fila)
+        layout.addWidget(pista)
+        layout.addLayout(fila_color)
+        if not editando:   # al editar, el aviso se cambia desde el menú del post-it
+            layout.addLayout(fila)
         layout.addWidget(botones)
+
+        if editando:
+            self.texto.setPlainText(nota["texto"])
+            self.texto.moveCursor(self.texto.textCursor().End)
+        self.texto.setFocus()
+
+    def texto_escrito(self) -> str:
+        return self.texto.toPlainText().strip()
+
+    def color(self) -> str:
+        """Color elegido, o None si se deja el automático."""
+        b = self._grupo_color.checkedButton()
+        color = b.property("color") if b else None
+        return None if color == self._automatico else color
 
     def aviso(self):
         """datetime del aviso elegido, o None si es "Sin aviso"."""

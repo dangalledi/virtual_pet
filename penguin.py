@@ -486,6 +486,7 @@ class PenguinCharacter(QWidget):
         for nota in notas.ordenadas(self.notas):
             una = sub.addMenu(notas.etiqueta(nota))
             item("👀 Ver", lambda n=nota: self.show_bubble("📝 " + n["texto"]), parent=una)
+            item("✏️ Editar…", lambda n=nota: self._editar_nota(n), parent=una)
             for nombre, minutos in notas.POSPONER:
                 item(f"⏰ Avisarme {nombre.lower()}",
                      lambda n=nota, m=minutos: self._avisar_nota_en(n, m), parent=una)
@@ -562,7 +563,9 @@ class PenguinCharacter(QWidget):
     # Notas y recordatorios
     # =======================================================================
     def _start_notas(self):
-        self.tablero = postits.Tablero(on_hecho=self._borrar_nota, on_movido=self._postit_movido)
+        self.tablero = postits.Tablero(hecho=self._borrar_nota, editar=self._editar_nota,
+                                       avisar=self._avisar_nota_en,
+                                       cambiado=lambda: notas.guardar(self.notas))
         self.tablero.sincronizar(self.notas)
         # Post-its a la vista solo mientras alguna ventana de Pingu tiene el foco.
         # Se espera un poco antes de esconderlos: al pasar el foco del pingüino a un
@@ -597,8 +600,8 @@ class PenguinCharacter(QWidget):
         dialogo.activateWindow()
         if dialogo.exec_() != notas.DialogoNota.Accepted:
             return
-        texto, aviso = dialogo.texto.text(), dialogo.aviso()
-        notas.nueva(self.notas, texto, aviso, fija=not recordatorio)
+        texto, aviso = dialogo.texto_escrito(), dialogo.aviso()
+        notas.nueva(self.notas, texto, aviso, fija=not recordatorio, color=dialogo.color())
         self._notas_cambiadas()
         if aviso:
             dia = "" if aviso.date() == datetime.date.today() else "mañana "
@@ -606,6 +609,18 @@ class PenguinCharacter(QWidget):
                              duration_ms=4000, theme=BubbleLabel.THEME_OK)
         else:
             self.show_bubble("📝 Apuntado", duration_ms=3000, theme=BubbleLabel.THEME_OK)
+
+    def _editar_nota(self, nota: dict):
+        dialogo = notas.DialogoNota(not nota.get("fija", True), nota=nota,
+                                    parent=self if self.isVisible() else None)
+        dialogo.activateWindow()
+        if dialogo.exec_() != notas.DialogoNota.Accepted or nota not in self.notas:
+            return
+        nota["texto"] = dialogo.texto_escrito()
+        if dialogo.color():
+            nota["color"] = dialogo.color()
+        notas.guardar(self.notas)
+        self._notas_cambiadas()
 
     def _avisar_nota_en(self, nota: dict, minutos):
         notas.poner_aviso(self.notas, nota, notas.en_minutos(minutos) if minutos else None)
@@ -627,10 +642,6 @@ class PenguinCharacter(QWidget):
         self.tablero.sincronizar(self.notas)
         if not self.isVisible():
             self._rehacer_menu_barra()
-
-    def _postit_movido(self, nota: dict, x: int, y: int):
-        nota["pos"] = [x, y]
-        notas.guardar(self.notas)
 
     def conectar_vpn(self):
         """Abre una terminal con el comando de la VPN (las contraseñas las escribes tú)."""
