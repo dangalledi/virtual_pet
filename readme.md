@@ -28,7 +28,7 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
    |---|---|
    | Woffu hours, clock in/out, reminders | `WOFFU_EMAIL`, `WOFFU_PASSWORD` |
    | Team absences (today, this week, next week) | `WOFFU_ICAL_URL` |
-   | Meeting reminders | `SOGO_USER`, `SOGO_PASSWORD`, `SOGO_CALENDAR_URL` |
+   | Meeting reminders | `SOGO_USER`, `SOGO_PASSWORD`, `SOGO_CALENDAR_URL` (one or more calendars, comma-separated) |
    | Rocket.Chat messages and status | `ROCKET_CHAT_URL`, `ROCKET_CHAT_APP_ID`, `ROCKET_CHAT_APP_SECRET` |
    | "Connect VPN" button | `VPN_CONNECT_CMD` |
    | 2FA code | `TOTP_SECRET_FILE` (a file with your base32 TOTP secret) + `oathtool` |
@@ -69,6 +69,7 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 
 ### Meetings (SOGo calendar)
 - Bubble 10 min before each meeting with the title, time and room (recurring meetings included)
+- **Several calendars**: put several URLs in `SOGO_CALENDAR_URL`, comma-separated (yours, your team's, shared ones…). Their meetings are merged (a meeting in two calendars shows once) and each one says which calendar it comes from
 - The calendar is only reachable through the VPN: without it, Pingu uses the last copy of today's calendar
 
 ### Rocket.Chat

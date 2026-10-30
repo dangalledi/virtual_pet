@@ -175,6 +175,8 @@ class AsistenteWorker(QThread):
                      f"({ev['start'].strftime('%H:%M')})")
             if ev["location"]:
                 texto += f"\n📍 {ev['location']}"
+            if ev.get("calendario"):
+                texto += f"\n📅 {ev['calendario']}"
             self.aviso.emit(texto, "reunion")
             log(f"Aviso de reunión: {ev['summary']}")
 
@@ -189,13 +191,14 @@ class AsistenteWorker(QThread):
         lineas = [f"📅 Reuniones hoy ({datetime.date.today().strftime('%d/%m')})"]
         now = datetime.datetime.now()
         for ev in events:
+            cal = f" [{ev['calendario']}]" if ev.get("calendario") else ""
             if ev["all_day"]:
-                lineas.append(f"• Todo el día: {ev['summary']}")
+                lineas.append(f"• Todo el día: {ev['summary']}{cal}")
                 continue
             marca = "✔ " if ev["end"] < now else "• "
             loc = f" ({ev['location']})" if ev["location"] else ""
             lineas.append(f"{marca}{ev['start'].strftime('%H:%M')}–{ev['end'].strftime('%H:%M')} "
-                          f"{ev['summary']}{loc}")
+                          f"{ev['summary']}{loc}{cal}")
         if not events:
             lineas.append("No hay nada en el calendario.")
         if sin_vpn:
