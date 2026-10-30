@@ -20,6 +20,7 @@ import calendario
 import dosfa
 import rocketchat
 import chistes
+import configuracion
 import mascotas
 import notas
 import postits
@@ -33,8 +34,6 @@ PENGUIN_SIZE = env_int("PENGUIN_SIZE", 100)
 # Alto de las otras mascotas (gato, pollo, pato): su dibujo ocupa todo el alto y el del
 # pingüino no (su PNG tiene mucho margen), así que con un 60 % quedan de un tamaño parecido
 MASCOTA_SIZE = env_int("MASCOTA_SIZE", PENGUIN_SIZE * 60 // 100)
-# Zoom de todo (mascota, globos, menús, post-its): opciones del menú 🔍 Tamaño
-ZOOMS = [1, 1.25, 1.5, 1.75, 2, 2.5]
 # Minutos que el pingüino se esconde en la barra con doble click
 HIDE_MINUTES = env_int("HIDE_MINUTES", 30)
 IMAGES_DIR = BASE_DIR / "images"
@@ -110,6 +109,7 @@ class PenguinCharacter(QWidget):
         self._fichaje_hecho.connect(self._on_fichaje_hecho)
 
         self.settings = load_settings()
+        self._config = None           # ventana de configuración abierta (o None)
         self.notas = notas.cargar()   # antes que la barra, que las pone en su menú
         self.woffu_status_text = "Woffu: cargando..."
 
@@ -402,13 +402,13 @@ class PenguinCharacter(QWidget):
         estado.setEnabled(False)
         menu.addSeparator()
 
-        # --- Woffu ---
+        # --- Consultas del día ---
         item("📋 Resumen del día", lambda: self._run_and_show(a.resumen_texto, "resumen"))
         item("⏱ Horas de hoy", lambda: self._run_and_show(w.horas_detalle))
         item({True: "🕒 Fichar salida…", False: "🕒 Fichar entrada…"}.get(w.clocked_in, "🕒 Fichar…"),
              self._fichar)
-        item("☀️ Jornada intensiva hoy", self._toggle_intensiva,
-             checked=w.es_intensiva(), enabled=not w.es_verano())   # en verano va sola
+        if calendario.sogo_configurado():
+            item("📅 Reuniones de hoy", lambda: self._run_and_show(a.reuniones_texto))
         if calendario.ausencias_configurado():
             sub = menu.addMenu("🏖️ Ausencias del equipo")
             item("Hoy", lambda: self._run_and_show(a.ausentes_texto), parent=sub)
@@ -417,72 +417,35 @@ class PenguinCharacter(QWidget):
             item("Próxima semana", lambda: self._run_and_show(lambda: a.ausencias_semana_texto(1)),
                  parent=sub)
 
-        # --- Reuniones ---
-        if calendario.sogo_configurado():
-            menu.addSeparator()
-            item("📅 Reuniones de hoy", lambda: self._run_and_show(a.reuniones_texto))
-            item(f"🔔 Avisarme {a.reunion_aviso_min} min antes de reuniones",
-                 lambda: self._toggle("avisos_reuniones"), checked=a.avisos_reuniones)
-
-        # --- Rocket.Chat ---
+        # --- Herramientas ---
+        menu.addSeparator()
+        self._menu_notas(menu.addMenu("📝 Notas y recordatorios"), item)
         if self.rc_client:
-            menu.addSeparator()
-            item("💬 Avisarme de mensajes y menciones",
-                 lambda: self._toggle("avisos_dm"), checked=self.rc_worker.activo)
-            item("🤖 Estado automático en Rocket.Chat",
-                 lambda: self._toggle("estado_auto"), checked=self.estado_rc.activo)
             sub = menu.addMenu("🟢 Cambiar estado en Rocket.Chat")
             for status, (emoji, nombre) in rocketchat.ESTADOS.items():
                 item(f"{emoji} {nombre}", lambda s=status: self._set_estado_manual(s), parent=sub)
-
-        # --- Notas y recordatorios ---
-        menu.addSeparator()
-        self._menu_mascota(menu.addMenu("🐾 Mascota"), item)
-        self._menu_zoom(menu.addMenu("🔍 Tamaño"), item)
-        self._menu_notas(menu.addMenu("📝 Notas y recordatorios"), item)
-
-        # --- Bienestar y otros ---
-        menu.addSeparator()
         if dosfa.configurado():
             item("🔐 Copiar código 2FA", self.copiar_2fa)
-        item(f"🧘 Recordarme hacer pausas (cada {a.pausa_cada} min)",
-             lambda: self._toggle("pausas"), checked=a.pausas_activas)
         if vpn.comando_conexion():
             item("🔌 Conectar VPN", self.conectar_vpn)
         item("📶 Comprobar VPN", self._check_vpn_now)
+
+        # --- Pingu ---
+        menu.addSeparator()
         item("😂 Cuéntame un chiste", self._fetch_joke)
         if not en_barra:
             item(f"🙈 Esconderme {HIDE_MINUTES} min", self.hide_to_tray)
+        item("⚙️ Configuración…", self.abrir_configuracion)
         item("Cerrar", self.close)
 
-    def _menu_mascota(self, sub: QMenu, item):
-        actual = self.mascota_actual()
-        item(mascotas.nombre(mascotas.PINGU), lambda: self.cambiar_mascota(mascotas.PINGU, ""),
-             checked=actual[0] == mascotas.PINGU, parent=sub)
-        for clave, (texto, _, colores, _) in mascotas.CATALOGO.items():
-            ok = mascotas.disponible(clave)
-            if len(colores) == 1:
-                act = item(texto, lambda c=clave, col=colores[0]: self.cambiar_mascota(c, col),
-                           checked=actual[0] == clave, enabled=ok, parent=sub)
-            else:
-                colsub = sub.addMenu(texto)
-                colsub.setEnabled(ok)
-                act = colsub.menuAction()
-                for col in colores:
-                    item(mascotas.COLORES.get(col, col).capitalize(),
-                         lambda c=clave, col=col: self.cambiar_mascota(c, col),
-                         checked=actual == (clave, col) or (actual[0] == clave and not actual[1]
-                                                             and col == colores[0]),
-                         parent=colsub)
-            if not ok:
-                act.setToolTip("Instala la extensión vscode-pets en VS Code")
-                act.setText(texto + " (instala vscode-pets)")
-
-    def _menu_zoom(self, sub: QMenu, item):
-        actual = self.settings.get("zoom", 1)
-        for zoom in ZOOMS:
-            texto = f"{round(zoom * 100)} %" + (" (normal)" if zoom == 1 else "")
-            item(texto, lambda z=zoom: self.cambiar_zoom(z), checked=zoom == actual, parent=sub)
+    def abrir_configuracion(self):
+        """Ventana de configuración (una sola: si ya está abierta, se trae delante)."""
+        if self._config is None:
+            self._config = configuracion.VentanaConfig(self)
+            self._config.destroyed.connect(lambda: setattr(self, "_config", None))
+        self._config.show()
+        self._config.raise_()
+        self._config.activateWindow()
 
     def cambiar_zoom(self, zoom: float):
         """Guarda el zoom y reinicia: Qt solo lo lee al arrancar (ver main.aplicar_zoom)."""
@@ -523,8 +486,6 @@ class PenguinCharacter(QWidget):
         item("⏰ Recuérdame…", lambda: self._nueva_nota(recordatorio=True), parent=sub)
         item("📝 Nueva nota…", lambda: self._nueva_nota(recordatorio=False), parent=sub)
         sub.addSeparator()
-        item("📌 Post-its siempre a la vista", lambda: self._toggle("postits_siempre"),
-             checked=self.opcion("postits_siempre"), parent=sub)
         if not self.notas:
             return
         item("👀 Verlas todas", lambda: self.show_bubble(notas.texto_lista(self.notas)), parent=sub)
@@ -562,6 +523,17 @@ class PenguinCharacter(QWidget):
                          theme=BubbleLabel.THEME_OK if activo else None)
         if clave == "estado_auto" and activo:
             self.estado_rc.actualizar()
+
+    def poner_opcion(self, clave: str, valor: bool):
+        """Desde la ventana de configuración: activa/desactiva (si no lo estaba ya)."""
+        if self.opcion(clave) != valor:
+            self._toggle(clave)
+            if not self.isVisible():
+                self._rehacer_menu_barra()
+
+    def poner_intensiva(self, valor: bool):
+        if self.asistente.woffu.es_intensiva() != valor:
+            self._toggle_intensiva()
 
     def opcion(self, clave: str) -> bool:
         return self.settings.get(clave, OPCIONES_POR_DEFECTO[clave])

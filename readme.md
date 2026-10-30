@@ -47,15 +47,19 @@ Woffu hours, meetings, Rocket.Chat messages, VPN and breaks. It talks to you wit
 | Click a bubble | Closes it (and brings the browser to the front / connects the VPN / copies the code, if the bubble says so) |
 | `←` `→` `↑` `↓` `A` | Walk, jump, slide, attack |
 
-**Right-click menu**
+**Right-click menu** (quick actions)
 
-- Woffu status line · 📋 Daily summary · ⏱ Hours today · 🕒 Clock in/out · ☀️ Intensive schedule today · 🏖️ Team absences ▸ today / this week / next week
-- 📅 Today's meetings · 🔔 Meeting reminders *(on/off)*
-- 💬 Message and mention alerts *(on/off)* · 🤖 Automatic Rocket.Chat status *(on/off, off by default)* · 🟢 Change Rocket.Chat status
-- 🐾 Pet ▸ penguin / cat / chicken / duck
-- 🔍 Size ▸ 100 % … 250 %
-- 📝 Notes and reminders ▸ remind me… / new note… / your notes (view, remind me in…, done)
-- 🔐 Copy 2FA code · 🧘 Break reminders *(on/off)* · 🔌 Connect VPN · 📶 Check VPN · 😂 Joke · 🙈 Hide · Close
+- Woffu status line · 📋 Daily summary · ⏱ Hours today · 🕒 Clock in/out · 📅 Today's meetings · 🏖️ Team absences ▸ today / this week / next week
+- 📝 Notes and reminders ▸ remind me… / new note… / your notes (view, edit, remind me in…, done) · 🟢 Change Rocket.Chat status ▸ · 🔐 Copy 2FA code · 🔌 Connect VPN · 📶 Check VPN
+- 😂 Joke · 🙈 Hide · ⚙️ Settings… · Close
+
+**⚙️ Settings window** (options that stay on; changes apply at once and are remembered)
+
+- Alerts: 🔔 meeting reminders · 💬 message and mention alerts · 🧘 break reminders
+- Rocket.Chat: 🤖 automatic status *(off by default)*
+- Workday: ☀️ intensive schedule today
+- Notes: 📌 post-its always visible
+- Look: 🐾 pet (penguin / cat / chicken / duck) · 🔍 size 100 % … 250 % (with *Apply*: Pingu restarts)
 
 When the penguin is hidden, the top-bar icon has the same menu (plus *Come back now*). Answers to menu options then appear as GNOME notifications and the penguin stays hidden; important alerts (meetings, messages, VPN…) still bring it back.
 
@@ -63,7 +67,7 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 
 ### Woffu
 - Checks your clock-ins every minute; the menu shows hours worked, time left and estimated leave time
-- 🎉 Jumps when you complete your hours (7h, or 6h 30min in the summer intensive schedule, 21-Jun → 15-Sep; outside those dates turn it on for today from the menu)
+- 🎉 Jumps when you complete your hours (7h, or 6h 30min in the summer intensive schedule, 21-Jun → 15-Sep; outside those dates turn it on for today in ⚙️ Settings)
 - ⏰ Reminders on weekdays if you haven't clocked in by 10:00, or you're still clocked in at 18:30
 - 🚽 Warns you 10 min before lunch; after clocking out it offers a 30-min "you can come back" reminder
 - Clocking in/out from the menu always asks for confirmation
@@ -86,12 +90,12 @@ When the penguin is hidden, the top-bar icon has the same menu (plus *Come back 
 - **⏰ Remind me…**: type what (e.g. *call Marta*) and when: in 5/15/30 min, 1/2 hours, or at a given time (if that time has passed, tomorrow). When it goes off it disappears
 - **📝 New note…**: a sticky note that stays in the list until you mark it **✅ Done**. It can have a reminder too; after it goes off, the note stays
 - Each note in the menu has its own submenu: view it, remind me in 15/30/60 min, remove the reminder, done
-- **Post-its on screen**: every note shows as a little yellow window (orange if it has a reminder, with its time). They only show while Pingu has the focus (click the penguin to see them; click another window and they hide). Drag them anywhere and resize them from the bottom-right corner — they remember where and how big you left them. **Double-click** to edit, **right-click** to change the color, copy the text, set a reminder or reset the size. **📋** = copy the text, **✓** = done. When writing a note, Enter adds a new line and Ctrl+Enter saves. *Post-its always visible* in the submenu keeps them on screen all the time
+- **Post-its on screen**: every note shows as a little yellow window (orange if it has a reminder, with its time). They only show while Pingu has the focus (click the penguin to see them; click another window and they hide). Drag them anywhere and resize them from the bottom-right corner — they remember where and how big you left them. **Double-click** to edit, **right-click** to change the color, copy the text, set a reminder or reset the size. **📋** = copy the text, **✓** = done. When writing a note, Enter adds a new line and Ctrl+Enter saves. *Post-its always visible* in ⚙️ Settings keeps them on screen all the time
 - Saved in `notas.json`, so they survive restarts; reminders missed while Pingu was closed show up when it starts
 
 ### Pets
-- **🐾 Pet** in the menu swaps the penguin for a **cat** (6 colours), a **chicken** (3 colours) or a **rubber duck**, from [vscode-pets](https://github.com/tonybaloney/vscode-pets). It changes on the spot and is remembered
-- **🔍 Size** in the menu zooms everything at once (pet, bubbles, menus, post-its, dialogs) from 100 % to 250 % — handy on 2K/4K screens. Pingu restarts itself to apply it, and it is remembered (`zoom` in `settings.json`)
+- **🐾 Pet** in ⚙️ Settings swaps the penguin for a **cat** (6 colours), a **chicken** (3 colours) or a **rubber duck**, from [vscode-pets](https://github.com/tonybaloney/vscode-pets). It changes on the spot and is remembered
+- **🔍 Size** in ⚙️ Settings zooms everything at once (pet, bubbles, menus, post-its, dialogs) from 100 % to 250 % — handy on 2K/4K screens. Pingu restarts itself to apply it, and it is remembered (`zoom` in `settings.json`)
 - The animations are read from the vscode-pets extension if you have it installed in VS Code. Without it, the chicken and duck are downloaded from the repo into `mascotas_cache/`; the cat needs the extension (the repo keeps its artwork encrypted because of its licence). `VSCODE_PETS_MEDIA` points to another `media/` folder
 - Their drawings are not copied into this repo. Credits: cat by [seethingswarm](https://seethingswarm.itch.io/catset), rubber duck by [Marc Duiker](https://twitter.com/marcduiker), chicken from the [vscode-pets](https://github.com/tonybaloney/vscode-pets) project
 
@@ -158,6 +162,7 @@ cp .env.example .env   # and fill it in
 | `notas.py` | Notes and reminders: storage and the "new note" dialog |
 | `mascotas.py` | Other pets (vscode-pets animations) |
 | `postits.py` | On-screen post-its for the notes |
+| `configuracion.py` | ⚙️ Settings window (alerts, workday, post-its, pet, size) |
 | `chistes.py` | The penguin's joke collection (no repeats until it has told them all) |
 | `dosfa.py` | 2FA (TOTP) code with `oathtool` |
 | `utils.py` | `.env`, logging, saved settings, idle time |
